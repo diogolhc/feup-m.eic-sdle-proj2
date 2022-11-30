@@ -56,7 +56,6 @@ class IpPortValidator:
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--debug", help="Debug and log to stdout.", action=argparse.BooleanOptionalAction)
 
     subparsers = parser.add_subparsers(required=True, dest="command")
 
@@ -65,12 +64,20 @@ def parse_arguments():
     get_parser = subparsers.add_parser("get", description="Find a user's timeline.")
     sub_parser = subparsers.add_parser("sub", description="Subscribe to a user's timeline.")
     unsub_parser = subparsers.add_parser("unsub", description="Unsubscribe to a user's timeline.")
+    all_parsers = [start_parser, post_parser, get_parser, sub_parser, unsub_parser]
 
-    start_parser.add_argument("-b", "--bootstrap-nodes", help="IP addresses of existing nodes.", type=IpPortValidator(DEFAULT_KADEMLIA_PORT).ip_address, nargs='+', default=[])
+    for subparser in all_parsers:
+        # Adding command here instead of main parser so that they appear
+        # in subcommand help
+        subparser.add_argument("-d", "--debug", help="Debug and log to stdout.", action=argparse.BooleanOptionalAction)
+
     start_parser.add_argument("-p", "--port", help="Kademlia port number to serve at.", type=PortValidator.port, default=DEFAULT_KADEMLIA_PORT)
-    start_parser.add_argument("-l", "--local-port", help="Port number to listen for local operations.", type=PortValidator.port, default=DEFAULT_LOCAL_PORT)
+    start_parser.add_argument("-b", "--bootstrap-nodes", help="IP addresses of existing nodes.", type=IpPortValidator(DEFAULT_KADEMLIA_PORT).ip_address, nargs='+', default=[])
 
-    post_parser.add_argument("")
+    # TODO other parsers
+
+    for subparser in all_parsers:
+        subparser.add_argument("-l", "--local-port", help="Port number that listens for local operations.", type=PortValidator.port, default=DEFAULT_LOCAL_PORT)
 
     return parser.parse_args()
 
