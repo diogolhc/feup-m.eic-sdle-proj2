@@ -1,23 +1,42 @@
 import asyncio
+import json
+import logging
 from kademlia.network import Server
 
-def start(port, local_port, bootstrap_ips, debug):
-    # TODO start listening on local port in another future
-    #      (unless there is a better alternative that I don't know of)
+log = logging.getLogger('timeline')
+
+async def start_async(port, bootstrap_nodes, local_port):
     server = Server()
 
-    loop = asyncio.new_event_loop()
-    loop.set_debug(debug)
+    async def handle_operation(reader, writer):
+        data = await reader.read()
+        message = json.loads(data.decode())
+        addr = writer.get_extra_info('peername')
 
-    loop.run_until_complete(server.listen(port))
+        log.debug("Received from %r: %r", message, addr)
 
-    if len(bootstrap_ips) > 0:
-        loop.run_until_complete(server.bootstrap(bootstrap_ips))
+        print(await server.get("foo"))
+        await server.set("foo", "bar")
 
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        server.stop()
-        loop.close()
+        writer.write("RESPOSTA".encode())
+        await writer.drain()
+        writer.close()
+
+    await server.listen(port)
+    
+    if len(bootstrap_nodes) > 0:
+            await server.bootstrap(bootstrap_nodes)
+
+    print(await server.get("foo"))
+    
+    server2 = await asyncio.start_server(handle_operation, '127.0.0.1', local_port)
+
+    log.debug("Locally listening for instructions on port %s", local_port)
+
+    async with server2:
+       await server2.serve_forever()
+
+    
+
+def start(port, bootstrap_nodes, local_port, debug):
+    asyncio.run(start_async(port, bootstrap_nodes, local_port), debug=debug)

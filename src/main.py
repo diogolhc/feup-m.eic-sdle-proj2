@@ -1,17 +1,15 @@
 import argparse
-import logging
 from multiprocessing.sharedctypes import Value
 import sys
 from node import start
 from operation import get, post, sub, unsub
 import ipaddress
+import logging
 
 handler = logging.StreamHandler()
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-log = logging.getLogger('distributed-timeline')
+handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+log = logging.getLogger('timeline')
 log.addHandler(handler)
-
 
 DEFAULT_KADEMLIA_PORT = 8468
 DEFAULT_LOCAL_PORT = 8600
@@ -74,9 +72,13 @@ def parse_arguments():
     start_parser.add_argument("-p", "--port", help="Kademlia port number to serve at.", type=PortValidator.port, default=DEFAULT_KADEMLIA_PORT)
     start_parser.add_argument("-b", "--bootstrap-nodes", help="IP addresses of existing nodes.", type=IpPortValidator(DEFAULT_KADEMLIA_PORT).ip_address, nargs='+', default=[])
 
-    # TODO other parsers
+    post_parser.add_argument("filepath", help="Path to file to post.")
+    get_parser.add_argument("username", help="ID of user to get timeline of.")
+    sub_parser.add_argument("username", help="ID of user to subscribe to.")
+    unsub_parser.add_argument("username", help="ID of user to unsubscribe from.")
 
     for subparser in all_parsers:
+        # Adding command here so it appears at the end of the help
         subparser.add_argument("-l", "--local-port", help="Port number that listens for local operations.", type=PortValidator.port, default=DEFAULT_LOCAL_PORT)
 
     return parser.parse_args()
@@ -85,19 +87,20 @@ def parse_arguments():
 def main():
     args = parse_arguments()
     if args.debug:
-        print(f"Called with arguments: {args}")
         log.setLevel(logging.DEBUG)
 
+    log.debug("Called with arguments: %s", args)
+
     if args.command == "start":
-        start(args.port, args.local_port, args.bootstrap_nodes, debug=args.debug)
+        start(args.port, args.bootstrap_nodes, local_port=args.local_port, debug=args.debug)
     elif args.command == "get":
-        get()
+        get(args.username, local_port=args.local_port, debug=args.debug)
     elif args.command == "post":
-        post()
+        post(args.filepath, local_port=args.local_port, debug=args.debug)
     elif args.command == "sub":
-        sub()
+        sub(args.username, local_port=args.local_port, debug=args.debug)
     elif args.command == "unsub":
-        unsub()
+        unsub(args.username, local_port=args.local_port, debug=args.debug)
 
 if __name__ == "__main__":
     main()
