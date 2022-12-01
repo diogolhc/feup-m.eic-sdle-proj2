@@ -1,10 +1,11 @@
 import argparse
 from multiprocessing.sharedctypes import Value
 import sys
-from node import start
+from node import Node
 from operation import get, post, sub, unsub
 import ipaddress
 import logging
+import asyncio
 
 handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
@@ -92,15 +93,17 @@ def main():
     log.debug("Called with arguments: %s", args)
 
     if args.command == "start":
-        start(args.port, args.bootstrap_nodes, local_port=args.local_port, debug=args.debug)
+        run = Node().run(args.port, args.bootstrap_nodes, local_port=args.local_port)
     elif args.command == "get":
-        get(args.username, local_port=args.local_port, debug=args.debug)
+        run = get(args.username, local_port=args.local_port)
     elif args.command == "post":
-        post(args.filepath, local_port=args.local_port, debug=args.debug)
+        run = post(args.filepath, local_port=args.local_port)
     elif args.command == "sub":
-        sub(args.username, local_port=args.local_port, debug=args.debug)
+        run = sub(args.username, local_port=args.local_port)
     elif args.command == "unsub":
-        unsub(args.username, local_port=args.local_port, debug=args.debug)
+        run = unsub(args.username, local_port=args.local_port)
+    
+    asyncio.run(run, debug=args.debug)
 
 if __name__ == "__main__":
     main()
