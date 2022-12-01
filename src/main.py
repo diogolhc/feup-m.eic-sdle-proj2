@@ -8,7 +8,7 @@ import logging
 import asyncio
 
 handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 log = logging.getLogger('timeline')
 log.addHandler(handler)
 

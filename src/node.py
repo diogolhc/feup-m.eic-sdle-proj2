@@ -11,9 +11,15 @@ class Node:
         self.node_connection = None
     
     async def handle_get(self, username):
+        # just to test kadmelia, not real implementation
+        val = await self.node_connection.get(username)
+        log.debug("Got value %s for key %s", val, username)
         return ErrorResponse("Not implemented.") # TODO
     
     async def handle_post(self, filepath):
+        # just to test kadmelia, not real implementation
+        await self.node_connection.set(filepath, filepath + filepath)
+        log.debug("Set value %s for key %s", filepath + filepath, filepath)
         return ErrorResponse("Not implemented.") # TODO
     
     async def handle_sub(self, username):

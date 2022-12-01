@@ -19,32 +19,43 @@ async def execute(data, local_port):
     writer.close()
     await writer.wait_closed()
 
-    if response["status"] == "ok":
-        pass # TODO
-    else:
+    if response["status"] != "ok":
         print(f"Error: {response['error']}")
+    return response
 
 
 async def get(username, local_port):
-    await execute({
+    response = await execute({
         "command": "get",
         "username": username
     }, local_port)
 
+    if response["status"] == "ok":
+        print(f"Pretty output not implemented.\n{response}") # TODO
+
 async def post(filepath, local_port):
-    await execute({
+    response = await execute({
         "command": "post",
         "filepath": filepath
     }, local_port)
 
+    if response["status"] == "ok":
+        print("Successfully posted to the timeline.")
+
 async def sub(username, local_port):
-    await execute({
+    response = await execute({
         "command": "sub",
         "username": username
     }, local_port)
 
+    if response["status"] == "ok":
+        print(f"Successfully subscribed to {username}.")
+
 async def unsub(username, local_port):
-    await execute({
+    response = await execute({
         "command": "unsub",
         "username": username
     }, local_port)
+
+    if response["status"] == "ok":
+        print(f"Successfully unsubscribed from {username}.")
