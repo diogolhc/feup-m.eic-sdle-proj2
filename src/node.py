@@ -15,6 +15,7 @@ class Node:
         self.username = username
         self.kademlia_connection = KademliaConnection()
         self.local_connection = LocalConnection(self.handle_get, self.handle_post, self.handle_sub, self.handle_unsub)
+        self.public_connection = PublicConnection(self.handle_public_get)
         self.storage = PersistentStorage(self.username)
         try:
             self.timeline = Timeline.read(self.storage)
@@ -22,7 +23,7 @@ class Node:
             print("Could not read timeline from storage.", e)
             exit(1)
     
-    async def handle_get(self, username, max_posts):
+    async def handle_public_get(self, username, max_posts):
         # 1st try: get own timeline
         if username == self.username:
             return OkResponse({"timeline": self.timeline.cache(max_posts)})
@@ -31,9 +32,18 @@ class Node:
         if self.storage.exists(username):
             try:
                 timeline = Timeline.read(self.storage, username)
+                # TODO check if timeline is up to date/valid
                 return OkResponse({"timeline": timeline.cache(max_posts)})
             except ... as e:
                 print("Could not read timeline from storage.", e)
+        
+        return ErrorResponse(f"Not locally available.")
+    
+    async def handle_get(self, username, max_posts):
+        # 1st and 2nd try: locally available
+        response = await handle_public_get(username, max_posts)
+        if response["status"] == "ok":
+            return response
 
         # 3rd try: get timeline directly from owner
         data = {
