@@ -5,108 +5,91 @@ from kademlia.network import Server
 from src.response import OkResponse, ErrorResponse
 from src.timeline import Timeline
 from src.storage import PersistentStorage
+from src.connection import request
+from src.validator import IpPortValidator
 
 log = logging.getLogger('timeline')
 
 class Node:
     def __init__(self, username):
         self.username = username
-        self.node_connection = None
-        self.storage = None
-        self.timeline = None
-        self.caches = {}
-    
-    def init_storage(self):
+        self.kademlia_connection = KademliaConnection()
+        self.local_connection = LocalConnection(self.handle_get, self.handle_post, self.handle_sub, self.handle_unsub)
         self.storage = PersistentStorage(self.username)
         try:
             self.timeline = Timeline.read(self.storage)
-        except:
-            print("Could not read timeline from storage.")
+        except ... as e:
+            print("Could not read timeline from storage.", e)
             exit(1)
-        for file in self.storage.files():
-            if file == self.username:
-                continue
-            try:
-                self.caches[file] = TimelineCache.read(self.storage, file)
-            except:
-                log.warning("Failed to read cache for %s", file)
     
-    async def handle_get(self, username):
-        # # just to test kadmelia, not real implementation
-        # val = await self.node_connection.get(username)
-        # log.debug("Got value %s for key %s", val, username)
-        return ErrorResponse("Not implemented.") # TODO
+    async def handle_get(self, username, max_posts):
+        # 1st try: get own timeline
+        if username == self.username:
+            return OkResponse({"timeline": self.timeline.cache(max_posts)})
+
+        # 2nd try: get cached timeline
+        if self.storage.exists(username):
+            try:
+                timeline = Timeline.read(self.storage, username)
+                return OkResponse({"timeline": timeline.cache(max_posts)})
+            except ... as e:
+                print("Could not read timeline from storage.", e)
+
+        # 3rd try: get timeline directly from owner
+        data = {
+            "command": "get-timeline", 
+            "username": f"{username[0]}:{username[1]}",
+            "max_posts": max_posts,
+        }
+
+        log.debug("Connecting to %s server on port %s", username[0], username[1])
+        response = await request(data, username[0], username[1])
+
+        if response["status"] == "ok":
+            return OkResponse({ "timeline": response["timeline"] })
+
+        # 4th try: get timeline from a subscriber
+        subscribers = await self.kademlia_get_subscribers(username)
+        if subscribers is None:
+            return ErrorResponse(f"No available source found.")
+        
+        for subscriber in subscribers:
+            log.debug("Connecting to subscriber %s:%s", subscriber[0], subscriber[1])
+            response = await request(data, subscriber[0], subscriber[1])
+            if response["status"] == "ok":
+                # TODO the teacher suggested that instead of just returning this one, 
+                #      we could have some heuristic probability of trying others until 
+                #      we are confident that we have an updated enough timeline.
+                return OkResponse({ "timeline": response["timeline"] })
+            else:
+                log.debug("Subscriber %s:%s responded with error: %s", subscriber[0], subscriber[1], response["error"])
+
+        return ErrorResponse(f"No available source found.")
     
     async def handle_post(self, filepath):
-        # # just to test kadmelia, not real implementation
-        # await self.node_connection.set(filepath, filepath + filepath)
-        # log.debug("Set value %s for key %s", filepath + filepath, filepath)
-        return ErrorResponse("Not implemented.") # TODO
+        try:
+            with open(filepath, "r") as f:
+                this.timeline.add_post(f.read())
+            this.timeline.store(self.storage)
+            return OkResponse()
+        except ... as e:
+            print("Could not post message.", e)
+            return ErrorResponse("Could not post message.")
     
     async def handle_sub(self, username):
-        return ErrorResponse("Not implemented.") # TODO
+        # TODO we need to set an async function that periodically goes to every subscriber and asks for the latest timeline
+        #      in order to cache it. The first time should be before subscribing probably, but then it's just periodic.
+        self.kademlia_connection.subscribe(username, self.username)
+        return OkResponse()
 
     async def handle_unsub(self, username):
-        return ErrorResponse("Not implemented.") # TODO
-
-    async def handle_command(self, command, message):
-        if command == "get":
-            if "username" not in message:
-                return ErrorResponse("No username provided.")
-            return await self.handle_get(message["username"])
-        elif command == "post":
-            if "filepath" not in message:
-                return ErrorResponse("No filepath provided.")
-            return await self.handle_post(message["filepath"])
-        elif command == "sub":
-            if "username" not in message:
-                return ErrorResponse("No username provided.")
-            return await self.handle_sub(message["username"])
-        elif command == "unsub":
-            if "username" not in message:
-                return ErrorResponse("No username provided.")
-            return await self.handle_unsub(message["username"])
-        else:
-            return ErrorResponse("Unknown command.")
-
-    async def handle_local_request(self, reader, writer):
-        data = await reader.read()
-        message = json.loads(data.decode())
-        addr = writer.get_extra_info('peername')
-
-        log.debug("Received from %r: %r", addr, message)
-
-        if "command" in message:
-            response = await self.handle_command(message["command"], message)
-        else:
-            response = ErrorResponse("No command provided.")
-
-        response = response.to_dict()
-        writer.write(json.dumps(response).encode())
-        log.debug("Responded to %r: %r", addr, response)
-        await writer.drain()
-        writer.close()
-
-    async def start_kademlia(self, port, bootstrap_nodes):
-        self.node_connection = Server()
-
-        await self.node_connection.listen(port)
-        
-        if len(bootstrap_nodes) > 0:
-            log.debug("Bootstrapping with %s", bootstrap_nodes)
-            await self.node_connection.bootstrap(bootstrap_nodes)
-        
-        log.debug("Ready to listen to peers on port %s", port)
-    
-    async def start_local(self, local_port):
-        local_server = await asyncio.start_server(self.handle_local_request, '127.0.0.1', local_port)
-
-        log.debug("Locally listening for instructions on port %s", local_port)
-
-        async with local_server:
-            await local_server.serve_forever()
+        self.kademlia_connection.unsubscribe(username, self.username)
+        return OkResponse()
 
     async def run(self, port, bootstrap_nodes, local_port):
-        self.init_storage()
-        await self.start_kademlia(port, bootstrap_nodes)
-        await self.start_local(local_port)
+        # TODO the teacher talked about synchronizing clocks between nodes, but I don't know why that would be necessary in this project.
+        #      anyway, if we decide to do that, it should be done only after everything else is done, probably.
+        await self.kademlia_connection.start(port, bootstrap_nodes)
+        await self.local_connection.start(local_port)
+        # TODO await self.start_public(self.username)
+        # This public server should listen for incoming requests from other nodes, in order to get their timelines.

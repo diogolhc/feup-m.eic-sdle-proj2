@@ -1,0 +1,38 @@
+import ipaddress
+
+class PortValidator:
+    """Validates and parses a port."""
+    def port(s):
+        port = int(s)
+        if port < 1 or port > 65535:
+            raise ValueError
+        return port
+
+
+class IpValidator:
+    def ip_address(s):
+        """Validates and parses an ip address."""
+        ipaddress.ip_address(s)
+        return s
+
+
+class IpPortValidator:
+    def __init__(self, default_port=None):
+        self.default_port = default_port
+
+    def ip_address(self, s):
+        """Validates and parses an ip:port pair."""
+        parts = s.split(':')
+
+        if len(parts) == 1:
+            if self.default_port is None:
+                raise ValueError
+            port = self.default_port
+        elif len(parts) == 2:
+            port = PortValidator.port(parts[1])
+        else:
+            raise ValueError
+        
+        ip = IpValidator.ip_address(parts[0])
+
+        return (ip, port)

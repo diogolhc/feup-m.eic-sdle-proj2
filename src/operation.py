@@ -1,28 +1,17 @@
 import json
 import logging
 import asyncio
+from src.connection import request
 
 log = logging.getLogger('timeline')
 
 async def execute(data, local_port):
     log.debug("Connecting to local server on port %s", local_port)
-    reader, writer = await asyncio.open_connection("127.0.0.1", local_port)
-
-    log.debug("Sending message: %s", data)
-    writer.write(json.dumps(data).encode())
-    writer.write_eof()
-    await writer.drain()
-    
-    data = await reader.read()
-    response = json.loads(data.decode())
-    log.debug("Received message: %s", response)
-    writer.close()
-    await writer.wait_closed()
+    response = await request(data, "127.0.0.1", local_port)
 
     if response["status"] != "ok":
         print(f"Error: {response['error']}")
     return response
-
 
 async def get(username, local_port):
     response = await execute({
@@ -31,7 +20,7 @@ async def get(username, local_port):
     }, local_port)
 
     if response["status"] == "ok":
-        print(f"Pretty output not implemented.\n{response}") # TODO
+        print(reponse["timeline"].pretty_str())
 
 async def post(filepath, local_port):
     response = await execute({

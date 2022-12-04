@@ -2,6 +2,9 @@ class Timeline:
     def __init__(self, username, posts):
         self.username = username
         self.posts = posts
+    
+    def add_post(self, post):
+        self.posts.append(post)
 
     def from_dict(data):
         return Timeline(**data)
@@ -18,19 +21,28 @@ class Timeline:
         else:
             return Timeline(username, [])
     
-    def cache(self, max_posts, time_to_live):
+    def pretty_str(self):
+        return f"Pretty output not implemented.\n{response}" # TODO
+    
+    def cache(self, max_posts, time_to_live=None):
         data = self.to_dict()
         data["posts"] = data["posts"][:max_posts]
         data["total_posts"] = len(self.posts)
-        data["last_updated"] = datetime.now().isoformat()
-        data["time_to_live"] = time_to_live
+        now = datetime.now()
+        data["last_updated"] = now.isoformat()
+        data["valid_until"] = (now + timedelta(seconds=time_to_live)).isoformat()
         return TimelineCache.from_dict(**data)
 
 
 class TimelineCache(Timeline):
-    def __init__(self, username, posts, total_posts, last_updated, time_to_live):
+    def __init__(self, username, posts, total_posts, last_updated, valid_until):
         super().__init__(username, posts)
         self.total_posts = total_posts
         self.last_updated = last_updated
-        self.time_to_live = time_to_live
+        self.valid_until = valid_until
     
+    def cache(self, max_posts):
+        data = self.to_dict()
+        data["posts"] = data["posts"][:max_posts]
+
+        return TimelineCache.from_dict(**data)

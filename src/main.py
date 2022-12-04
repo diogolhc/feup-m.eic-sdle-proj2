@@ -3,7 +3,7 @@ from multiprocessing.sharedctypes import Value
 import sys
 from src.node import Node
 from src.operation import get, post, sub, unsub
-import ipaddress
+from src.validator import IpPortValidator, PortValidator, IpValidator
 import logging
 import asyncio
 
@@ -15,44 +15,6 @@ log.addHandler(handler)
 DEFAULT_PUBLIC_PORT = 8000
 DEFAULT_KADEMLIA_PORT = 8468
 DEFAULT_LOCAL_PORT = 8600
-
-class PortValidator:
-    """Validates and parses a port."""
-    def port(s):
-        port = int(s)
-        if port < 1 or port > 65535:
-            raise ValueError
-        return port
-
-
-class IpValidator:
-    def ip_address(s):
-        """Validates and parses an ip address."""
-        ipaddress.ip_address(s)
-        return s
-
-
-class IpPortValidator:
-    def __init__(self, default_port=None):
-        self.default_port = default_port
-
-    def ip_address(self, s):
-        """Validates and parses an ip:port pair."""
-        parts = s.split(':')
-
-        if len(parts) == 1:
-            if self.default_port is None:
-                raise ValueError
-            port = self.default_port
-        elif len(parts) == 2:
-            port = PortValidator.port(parts[1])
-        else:
-            raise ValueError
-        
-        ip = IpValidator.ip_address(parts[0])
-
-        return (ip, port)
-
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
@@ -75,10 +37,10 @@ def parse_arguments():
     start_parser.add_argument("-k", "--kademlia-port", help="Kademlia port number to serve at.", type=PortValidator.port, default=DEFAULT_KADEMLIA_PORT)
     start_parser.add_argument("-b", "--bootstrap-nodes", help="IP addresses of existing nodes.", type=IpPortValidator(DEFAULT_KADEMLIA_PORT).ip_address, nargs='+', default=[])
 
-    post_parser.add_argument("filepath", help="Path to file to post.")
-    get_parser.add_argument("username", help="ID of user to get timeline of.")
-    sub_parser.add_argument("username", help="ID of user to subscribe to.")
-    unsub_parser.add_argument("username", help="ID of user to unsubscribe from.")
+    post_parser.add_argument("filepath", help="Path to file to post.", required=True)
+    get_parser.add_argument("username", help="ID of user to get timeline of.", type=IpPortValidator(DEFAULT_PUBLIC_PORT).ip_address, required=True)
+    sub_parser.add_argument("username", help="ID of user to subscribe to.", type=IpPortValidator(DEFAULT_PUBLIC_PORT).ip_address, required=True)
+    unsub_parser.add_argument("username", help="ID of user to unsubscribe from.", type=IpPortValidator(DEFAULT_PUBLIC_PORT).ip_address, required=True)
 
     for subparser in all_parsers:
         # Adding command here so it appears at the end of the help
@@ -95,7 +57,7 @@ def main():
     log.debug("Called with arguments: %s", args)
 
     if args.command == "start":
-        run = Node(args.username).run(args.port, args.bootstrap_nodes, local_port=args.local_port)
+        run = Node(args.username).run(args.kademlia_port, args.bootstrap_nodes, local_port=args.local_port)
     elif args.command == "get":
         run = get(args.username, local_port=args.local_port)
     elif args.command == "post":
