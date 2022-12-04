@@ -2,24 +2,45 @@ import asyncio
 import json
 import logging
 from kademlia.network import Server
-from response import OkResponse, ErrorResponse
+from src.response import OkResponse, ErrorResponse
+from src.timeline import Timeline
+from src.storage import PersistentStorage
 
 log = logging.getLogger('timeline')
 
 class Node:
-    def __init__(self):
+    def __init__(self, username):
+        self.username = username
         self.node_connection = None
+        self.storage = None
+        self.timeline = None
+        self.caches = {}
+    
+    def init_storage(self):
+        self.storage = PersistentStorage(self.username)
+        try:
+            self.timeline = Timeline.read(self.storage)
+        except:
+            print("Could not read timeline from storage.")
+            exit(1)
+        for file in self.storage.files():
+            if file == self.username:
+                continue
+            try:
+                self.caches[file] = TimelineCache.read(self.storage, file)
+            except:
+                log.warning("Failed to read cache for %s", file)
     
     async def handle_get(self, username):
-        # just to test kadmelia, not real implementation
-        val = await self.node_connection.get(username)
-        log.debug("Got value %s for key %s", val, username)
+        # # just to test kadmelia, not real implementation
+        # val = await self.node_connection.get(username)
+        # log.debug("Got value %s for key %s", val, username)
         return ErrorResponse("Not implemented.") # TODO
     
     async def handle_post(self, filepath):
-        # just to test kadmelia, not real implementation
-        await self.node_connection.set(filepath, filepath + filepath)
-        log.debug("Set value %s for key %s", filepath + filepath, filepath)
+        # # just to test kadmelia, not real implementation
+        # await self.node_connection.set(filepath, filepath + filepath)
+        # log.debug("Set value %s for key %s", filepath + filepath, filepath)
         return ErrorResponse("Not implemented.") # TODO
     
     async def handle_sub(self, username):
@@ -86,5 +107,6 @@ class Node:
             await local_server.serve_forever()
 
     async def run(self, port, bootstrap_nodes, local_port):
+        self.init_storage()
         await self.start_kademlia(port, bootstrap_nodes)
         await self.start_local(local_port)

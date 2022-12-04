@@ -1,8 +1,8 @@
 import argparse
 from multiprocessing.sharedctypes import Value
 import sys
-from node import Node
-from operation import get, post, sub, unsub
+from src.node import Node
+from src.operation import get, post, sub, unsub
 import ipaddress
 import logging
 import asyncio
@@ -12,6 +12,7 @@ handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)
 log = logging.getLogger('timeline')
 log.addHandler(handler)
 
+DEFAULT_PUBLIC_PORT = 8000
 DEFAULT_KADEMLIA_PORT = 8468
 DEFAULT_LOCAL_PORT = 8600
 
@@ -70,7 +71,8 @@ def parse_arguments():
         # in subcommand help
         subparser.add_argument("-d", "--debug", help="Debug and log to stdout.", action=argparse.BooleanOptionalAction)
 
-    start_parser.add_argument("-p", "--port", help="Kademlia port number to serve at.", type=PortValidator.port, default=DEFAULT_KADEMLIA_PORT)
+    start_parser.add_argument("-u", "--username", help="Username, composed of the node's IP and public port.", type=IpPortValidator(DEFAULT_PUBLIC_PORT).ip_address, required=True)
+    start_parser.add_argument("-k", "--kademlia-port", help="Kademlia port number to serve at.", type=PortValidator.port, default=DEFAULT_KADEMLIA_PORT)
     start_parser.add_argument("-b", "--bootstrap-nodes", help="IP addresses of existing nodes.", type=IpPortValidator(DEFAULT_KADEMLIA_PORT).ip_address, nargs='+', default=[])
 
     post_parser.add_argument("filepath", help="Path to file to post.")
@@ -93,7 +95,7 @@ def main():
     log.debug("Called with arguments: %s", args)
 
     if args.command == "start":
-        run = Node().run(args.port, args.bootstrap_nodes, local_port=args.local_port)
+        run = Node(args.username).run(args.port, args.bootstrap_nodes, local_port=args.local_port)
     elif args.command == "get":
         run = get(args.username, local_port=args.local_port)
     elif args.command == "post":
