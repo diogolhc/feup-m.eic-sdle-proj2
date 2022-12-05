@@ -11,7 +11,7 @@ class Node:
 
     def __init__(self, username):
         self.username = username
-        self.kademlia_connection = KademliaConnection()
+        self.kademlia_connection = KademliaConnection(self.username)
         self.local_connection = LocalConnection(self.handle_get, self.handle_post, self.handle_sub, self.handle_unsub)
         self.public_connection = PublicConnection(self.handle_public_get)
         self.storage = PersistentStorage(self.username)
@@ -39,7 +39,7 @@ class Node:
     
     async def handle_get(self, username, max_posts):
         # 1st and 2nd try: locally available
-        response = await handle_public_get(username, max_posts)
+        response = await self.handle_public_get(username, max_posts)
         if response["status"] == "ok":
             return response
 
@@ -85,13 +85,13 @@ class Node:
             return ErrorResponse("Could not post message.")
     
     async def handle_sub(self, username):
-        # TODO we need to set an async function that periodically goes to every subscriber and asks for the latest timeline
+        # TODO we need to set an async function (self.update_cached_timelines) that periodically goes to every subscriber and asks for the latest timeline
         #      in order to cache it. The first time should be before subscribing probably, but then it's just periodic.
-        self.kademlia_connection.subscribe(username, self.username)
+        self.kademlia_connection.subscribe(username)
         return OkResponse()
 
     async def handle_unsub(self, username):
-        self.kademlia_connection.unsubscribe(username, self.username)
+        self.kademlia_connection.unsubscribe(username)
         return OkResponse()
 
     async def update_cached_timelines(self):

@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 class Timeline:
     def __init__(self, username, posts):
         self.username = username
@@ -22,7 +24,7 @@ class Timeline:
             return Timeline(username, [])
     
     def pretty_str(self):
-        return f"Pretty output not implemented.\n{response}" # TODO
+        return f"Pretty output not implemented.\n{self.posts}" # TODO
     
     def cache(self, max_posts, time_to_live=None):
         data = self.to_dict()

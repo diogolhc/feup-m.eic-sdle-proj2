@@ -18,7 +18,7 @@ async def get(username, local_port):
     }, local_port)
 
     if response["status"] == "ok":
-        print(reponse["timeline"].pretty_str())
+        print(response["timeline"].pretty_str())
 
 async def post(filepath, local_port):
     response = await execute({

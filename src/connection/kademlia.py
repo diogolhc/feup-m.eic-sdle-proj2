@@ -6,14 +6,17 @@ from kademlia.network import Server
 log = logging.getLogger('timeline')
 
 class KademliaConnection:
-    def __init__(self):
+    def __init__(self, username):
         self.connection = None
+        self.username = username
     
-    async def subscribe(self, username, subscriber):
-        await self.set_subscription(username, subscriber, True)
+    async def subscribe(self, username):
+        await self.set_subscription(self.subscribed_key(self.username), username, True)
+        await self.set_subscription(self.subscribers_key(username), self.username, True)
     
-    async def unsubscribe(self, username, subscriber):
-        await self.set_subscription(username, subscriber, False)
+    async def unsubscribe(self, username):
+        await self.set_subscription(self.subscribed_key(self.username), username, False)
+        await self.set_subscription(self.subscribers_key(username), self.username, False)
 
     async def get_subscribers(self, username):
         response = self.get_subscribers_raw(username)
@@ -22,25 +25,29 @@ class KademliaConnection:
         
         return [IpPortValidator().ip_address(s) for s in response]
     
-    async def subscription_key(self, username):
+    async def subscribers_key(self, username):
         return f"{username[0]}:{username[1]}-subscribers"
     
-    async def set_subscription(self, username, subscriber, subscribed):
-        response = self.get(self.subscription_key(username))
+    async def subscribed_key(self, username):
+        return f"{username[0]}:{username[1]}-subscribed"
+    
+    async def set_subscription(self, key, target, subscribed):
+        response = self.get(key)
         if response is None:
             response = []
-        subscription = f"{subscriber[0]}:{subscriber[1]}"
+        subscription = f"{target[0]}:{target[1]}"
 
         if subscribed:
             if subscription not in response:
                 response.append(subscription)
-                self.put(self.subscription_key(username), response)
+                self.put(key, response)
         else:
             if subscription in response:
                 response.remove(subscription)
-                self.put(self.subscription_key(username), response)
-        # TODO this can cause concurrency issues, we should try to minimize them, for
-        #      example with exponential backoff and multiple tries
+                self.put(key, response)
+        # TODO this can cause concurrency issues, we should try to minimize them, for example with exponential backoff and multiple tries
+        #      Probably this concurrency problem will only happen in ip:port-subscribers, since that is shared among many people
+        #      The key ip:port-subscribed is owned by a single person, and no one else will edit it
 
     async def get(self, key):
         response = await self.connection.get(key)
