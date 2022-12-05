@@ -1,4 +1,10 @@
-class LocalConnection(BaseConnection):
+from src.connection.base import BaseConnection
+from src.connection.response import ErrorResponse
+import logging
+
+log = logging.getLogger('timeline')
+
+class PublicConnection(BaseConnection):
     def __init__(self, handle_get_timeline):
         self.handle_get_timeline = handle_get_timeline
 

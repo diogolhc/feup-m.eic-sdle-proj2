@@ -1,3 +1,9 @@
+from src.connection.base import BaseConnection
+from src.connection.response import ErrorResponse
+import logging
+
+log = logging.getLogger('timeline')
+
 class LocalConnection(BaseConnection):
     def __init__(self, handle_get, handle_post, handle_sub, handle_unsub):
         self.handle_get = handle_get

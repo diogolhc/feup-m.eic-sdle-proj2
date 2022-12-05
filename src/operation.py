@@ -1,6 +1,4 @@
-import json
 import logging
-import asyncio
 from src.connection import request
 
 log = logging.getLogger('timeline')

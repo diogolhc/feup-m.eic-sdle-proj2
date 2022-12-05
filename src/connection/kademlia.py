@@ -1,3 +1,10 @@
+from src.validator import IpPortValidator
+import logging
+import json
+from kademlia.network import Server
+
+log = logging.getLogger('timeline')
+
 class KademliaConnection:
     def __init__(self):
         self.connection = None
@@ -15,7 +22,7 @@ class KademliaConnection:
         
         return [IpPortValidator().ip_address(s) for s in response]
     
-    async subscription_key(self, username):
+    async def subscription_key(self, username):
         return f"{username[0]}:{username[1]}-subscribers"
     
     async def set_subscription(self, username, subscriber, subscribed):
@@ -35,13 +42,13 @@ class KademliaConnection:
         # TODO this can cause concurrency issues, we should try to minimize them, for
         #      example with exponential backoff and multiple tries
 
-    async def get(key):
+    async def get(self, key):
         response = await self.connection.get(key)
         if response is None:
             return None
         return json.loads(response)
     
-    async def put(key, value):
+    async def put(self, key, value):
         await self.connection.set(key, json.dumps(value))
 
     async def start(self, port, bootstrap_nodes):

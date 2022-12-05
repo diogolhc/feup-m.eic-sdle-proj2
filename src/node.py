@@ -1,16 +1,14 @@
 import asyncio
-import json
 import logging
-from kademlia.network import Server
-from src.response import OkResponse, ErrorResponse
 from src.timeline import Timeline
 from src.storage import PersistentStorage
-from src.connection import request
-from src.validator import IpPortValidator
+from src.connection import request, LocalConnection, PublicConnection, KademliaConnection, OkResponse, ErrorResponse
 
 log = logging.getLogger('timeline')
 
 class Node:
+    SLEEP_TIME_BETWEEN_CACHING = 10
+
     def __init__(self, username):
         self.username = username
         self.kademlia_connection = KademliaConnection()
@@ -96,10 +94,17 @@ class Node:
         self.kademlia_connection.unsubscribe(username, self.username)
         return OkResponse()
 
+    async def update_cached_timelines(self):
+        # TODO this is where we should go to everyone we subscribed and ask for the latest timeline
+        pass
+
     async def run(self, port, bootstrap_nodes, local_port):
         # TODO the teacher talked about synchronizing clocks between nodes, but I don't know why that would be necessary in this project.
         #      anyway, if we decide to do that, it should be done only after everything else is done, probably.
         await self.kademlia_connection.start(port, bootstrap_nodes)
-        await self.local_connection.start(local_port)
-        # TODO await self.start_public(self.username)
-        # This public server should listen for incoming requests from other nodes, in order to get their timelines.
+        asyncio.create_task(self.local_connection.start(local_port))
+        asyncio.create_task(self.public_connection.start(self.username))
+
+        while True:
+            await self.update_cached_timelines()
+            await asyncio.sleep(self.SLEEP_TIME_BETWEEN_CACHING) # TODO maybe this can be a cmd argument

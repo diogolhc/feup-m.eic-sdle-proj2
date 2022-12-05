@@ -1,3 +1,10 @@
+from src.connection.response import ErrorResponse
+import logging
+import json
+import asyncio
+
+log = logging.getLogger('timeline')
+
 class BaseConnection:
     async def handle_command(self, command, message):
         pass
