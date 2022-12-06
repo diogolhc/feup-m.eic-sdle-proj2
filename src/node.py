@@ -3,6 +3,7 @@ import logging
 from src.timeline import Timeline
 from src.storage import PersistentStorage
 from src.connection import request, LocalConnection, PublicConnection, KademliaConnection, OkResponse, ErrorResponse
+from src.username import Username
 
 log = logging.getLogger('timeline')
 
@@ -10,29 +11,29 @@ class Node:
     SLEEP_TIME_BETWEEN_CACHING = 10
 
     def __init__(self, username):
-        self.username = username
+        self.username = Username(username)
         self.kademlia_connection = KademliaConnection(self.username)
         self.local_connection = LocalConnection(self.handle_get, self.handle_post, self.handle_sub, self.handle_unsub)
         self.public_connection = PublicConnection(self.handle_public_get)
         self.storage = PersistentStorage(self.username)
         try:
-            self.timeline = Timeline.read(self.storage)
-        except ... as e:
+            self.timeline = Timeline.read(self.storage, self.username)
+        except Exception as e:
             print("Could not read timeline from storage.", e)
             exit(1)
     
     async def handle_public_get(self, username, max_posts):
         # 1st try: get own timeline
         if username == self.username:
-            return OkResponse({"timeline": self.timeline.cache(max_posts)})
+            return OkResponse({"timeline": self.timeline.cache(max_posts).to_dict()})
 
         # 2nd try: get cached timeline
-        if self.storage.exists(username):
+        if self.storage.exists(username): # TODO storage using username
             try:
                 timeline = Timeline.read(self.storage, username)
                 # TODO check if timeline is up to date/valid
-                return OkResponse({"timeline": timeline.cache(max_posts)})
-            except ... as e:
+                return OkResponse({"timeline": timeline.cache(max_posts).to_dict()})
+            except Exception as e:
                 print("Could not read timeline from storage.", e)
         
         return ErrorResponse(f"Not locally available.")
@@ -40,18 +41,18 @@ class Node:
     async def handle_get(self, username, max_posts):
         # 1st and 2nd try: locally available
         response = await self.handle_public_get(username, max_posts)
-        if response["status"] == "ok":
+        if response.status == "ok":
             return response
 
         # 3rd try: get timeline directly from owner
         data = {
             "command": "get-timeline", 
-            "username": f"{username[0]}:{username[1]}",
+            "username": str(username),
             "max_posts": max_posts,
         }
 
-        log.debug("Connecting to %s server on port %s", username[0], username[1])
-        response = await request(data, username[0], username[1])
+        log.debug("Connecting to %s", username)
+        response = await request(data, username.ip, username.port)
 
         if response["status"] == "ok":
             return OkResponse({ "timeline": response["timeline"] })
@@ -77,10 +78,10 @@ class Node:
     async def handle_post(self, filepath):
         try:
             with open(filepath, "r") as f:
-                this.timeline.add_post(f.read())
-            this.timeline.store(self.storage)
+                self.timeline.add_post(f.read())
+            self.timeline.store(self.storage)
             return OkResponse()
-        except ... as e:
+        except Exception as e:
             print("Could not post message.", e)
             return ErrorResponse("Could not post message.")
     

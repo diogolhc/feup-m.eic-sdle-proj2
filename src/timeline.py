@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from src.username import Username
 
 class Timeline:
     def __init__(self, username, posts):
@@ -6,20 +7,23 @@ class Timeline:
         self.posts = posts
     
     def add_post(self, post):
-        self.posts.append(post)
+        self.posts.append(post) # TODO post object with timestamp and id
 
     def from_dict(data):
+        data['username'] = Username.from_str(data['username'])
         return Timeline(**data)
     
     def to_dict(self):
-        return self.__dict__
+        data = self.__dict__.copy()
+        data['username'] = str(data['username'])
+        return data
     
     def store(self, storage):
-        storage.write(self.to_dict(), self.username)
+        storage.write(self.to_dict(), self.username) # TODO storage uses username
     
-    def read(self, storage, username=None):
-        if storage.exists(username):
-            return Timeline.from_dict(storage.read(username))
+    def read(storage, username):
+        if storage.exists(username): # TODO storage uses username
+            return Timeline.from_dict(storage.read(username)) # TODO storage uses username
         else:
             return Timeline(username, [])
     
@@ -32,8 +36,11 @@ class Timeline:
         data["total_posts"] = len(self.posts)
         now = datetime.now()
         data["last_updated"] = now.isoformat()
-        data["valid_until"] = (now + timedelta(seconds=time_to_live)).isoformat()
-        return TimelineCache.from_dict(**data)
+        if time_to_live is None:
+            data["valid_until"] = None
+        else:
+            data["valid_until"] = (now + timedelta(seconds=time_to_live)).isoformat()
+        return TimelineCache.from_dict(data)
 
 
 class TimelineCache(Timeline):
@@ -48,3 +55,7 @@ class TimelineCache(Timeline):
         data["posts"] = data["posts"][:max_posts]
 
         return TimelineCache.from_dict(**data)
+    
+    def from_dict(data):
+        data['username'] = Username.from_str(data['username'])
+        return TimelineCache(**data)

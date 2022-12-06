@@ -1,5 +1,6 @@
 from src.connection.base import BaseConnection
 from src.connection.response import ErrorResponse
+from src.username import Username
 import logging
 
 log = logging.getLogger('timeline')
@@ -15,7 +16,7 @@ class LocalConnection(BaseConnection):
         if command == "get":
             if "username" not in message:
                 return ErrorResponse("No username provided.")
-            return await self.handle_get(message["username"])
+            return await self.handle_get(Username.from_str(message["username"]), 10) # TODO handle username errors TODO max posts
         elif command == "post":
             if "filepath" not in message:
                 return ErrorResponse("No filepath provided.")
@@ -23,11 +24,11 @@ class LocalConnection(BaseConnection):
         elif command == "sub":
             if "username" not in message:
                 return ErrorResponse("No username provided.")
-            return await self.handle_sub(message["username"])
+            return await self.handle_sub(Username.from_str(message["username"]))
         elif command == "unsub":
             if "username" not in message:
                 return ErrorResponse("No username provided.")
-            return await self.handle_unsub(message["username"])
+            return await self.handle_unsub(Username.from_str(message["username"]))
         else:
             return ErrorResponse("Unknown command.")
 

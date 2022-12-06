@@ -7,13 +7,13 @@ class PersistentStorage:
 
     def __init__(self, id):
         self.id = id
-        self.base_dir = os.path.join(self.BASE_DIR, id)
+        self.base_dir = os.path.join(self.BASE_DIR, id.to_filename())
         Path(self.base_dir).mkdir(parents=True, exist_ok=True)
 
-    def get_path(self, username=None):
-        if username == None:
+    def get_path(self, username=None): # TODO storage uses username
+        if username is None:
             username = self.id
-        return os.path.join(self.base_dir, username) + ".json"
+        return os.path.join(self.base_dir, username.to_filename()) + ".json"
 
     def exists(self, username=None):
         return os.path.exists(self.get_path(username))

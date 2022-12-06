@@ -11,12 +11,12 @@ class KademliaConnection:
         self.username = username
     
     async def subscribe(self, username):
-        await self.set_subscription(self.subscribed_key(self.username), username, True)
-        await self.set_subscription(self.subscribers_key(username), self.username, True)
+        await self.set_subscription(f"{username}-subscribed", username, True)
+        await self.set_subscription(f"{username}-subscribers", self.username, True)
     
     async def unsubscribe(self, username):
-        await self.set_subscription(self.subscribed_key(self.username), username, False)
-        await self.set_subscription(self.subscribers_key(username), self.username, False)
+        await self.set_subscription(f"{username}-subscribed", username, False)
+        await self.set_subscription(f"{username}-subscribers", self.username, False)
 
     async def get_subscribers(self, username):
         response = self.get_subscribers_raw(username)
@@ -25,17 +25,11 @@ class KademliaConnection:
         
         return [IpPortValidator().ip_address(s) for s in response]
     
-    async def subscribers_key(self, username):
-        return f"{username[0]}:{username[1]}-subscribers"
-    
-    async def subscribed_key(self, username):
-        return f"{username[0]}:{username[1]}-subscribed"
-    
     async def set_subscription(self, key, target, subscribed):
         response = self.get(key)
         if response is None:
             response = []
-        subscription = f"{target[0]}:{target[1]}"
+        subscription = str(target)
 
         if subscribed:
             if subscription not in response:

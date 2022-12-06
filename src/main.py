@@ -33,14 +33,14 @@ def parse_arguments():
         # in subcommand help
         subparser.add_argument("-d", "--debug", help="Debug and log to stdout.", action=argparse.BooleanOptionalAction)
 
-    start_parser.add_argument("-u", "--username", help="Username, composed of the node's IP and public port.", type=IpPortValidator(DEFAULT_PUBLIC_PORT).ip_address, required=True)
+    start_parser.add_argument("userid", help="ID of the user, composed of the node's IP and public port.", type=IpPortValidator(DEFAULT_PUBLIC_PORT).ip_address)
     start_parser.add_argument("-k", "--kademlia-port", help="Kademlia port number to serve at.", type=PortValidator.port, default=DEFAULT_KADEMLIA_PORT)
     start_parser.add_argument("-b", "--bootstrap-nodes", help="IP addresses of existing nodes.", type=IpPortValidator(DEFAULT_KADEMLIA_PORT).ip_address, nargs='+', default=[])
 
-    post_parser.add_argument("filepath", help="Path to file to post.", required=True)
-    get_parser.add_argument("username", help="ID of user to get timeline of.", type=IpPortValidator(DEFAULT_PUBLIC_PORT).ip_address, required=True)
-    sub_parser.add_argument("username", help="ID of user to subscribe to.", type=IpPortValidator(DEFAULT_PUBLIC_PORT).ip_address, required=True)
-    unsub_parser.add_argument("username", help="ID of user to unsubscribe from.", type=IpPortValidator(DEFAULT_PUBLIC_PORT).ip_address, required=True)
+    post_parser.add_argument("filepath", help="Path to file to post.")
+    get_parser.add_argument("userid", help="ID of user to get timeline of.", type=IpPortValidator(DEFAULT_PUBLIC_PORT).ip_address)
+    sub_parser.add_argument("userid", help="ID of user to subscribe to.", type=IpPortValidator(DEFAULT_PUBLIC_PORT).ip_address)
+    unsub_parser.add_argument("userid", help="ID of user to unsubscribe from.", type=IpPortValidator(DEFAULT_PUBLIC_PORT).ip_address)
 
     for subparser in all_parsers:
         # Adding command here so it appears at the end of the help
@@ -57,15 +57,15 @@ def main():
     log.debug("Called with arguments: %s", args)
 
     if args.command == "start":
-        run = Node(args.username).run(args.kademlia_port, args.bootstrap_nodes, local_port=args.local_port)
+        run = Node(args.userid).run(args.kademlia_port, args.bootstrap_nodes, local_port=args.local_port)
     elif args.command == "get":
-        run = get(args.username, local_port=args.local_port)
+        run = get(args.userid, local_port=args.local_port)
     elif args.command == "post":
         run = post(args.filepath, local_port=args.local_port)
     elif args.command == "sub":
-        run = sub(args.username, local_port=args.local_port)
+        run = sub(args.userid, local_port=args.local_port)
     elif args.command == "unsub":
-        run = unsub(args.username, local_port=args.local_port)
+        run = unsub(args.userid, local_port=args.local_port)
     
     asyncio.run(run, debug=args.debug)
 
