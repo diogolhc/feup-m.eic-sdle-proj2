@@ -2,6 +2,7 @@
 import asyncio
 import logging
 from src.data.timeline import Timeline
+from data.merged_timeline import MergedTimeline
 from src.data.subscriptions import Subscriptions
 from src.data.storage import PersistentStorage
 from src.connection import (
@@ -30,7 +31,7 @@ class Node:
         # Connections
         self.kademlia_connection = KademliaConnection(self.username)
         self.local_connection = LocalConnection(
-            self.handle_get, self.handle_post, self.handle_sub, self.handle_unsub
+            self.handle_get, self.handle_post, self.handle_sub, self.handle_unsub, self.handle_view, self.handle_people_i_may_know
         )
         self.public_connection = PublicConnection(self.handle_public_get)
 
@@ -162,6 +163,21 @@ class Node:
             self.subscriptions.subscriptions = subscriptions_backup
             print("Could not unsubscribe.", e)
             return ErrorResponse("Could not unsubscribe.")
+
+    async def handle_view(self, max_posts):
+        timelines = []
+
+        for subscriber in self.subscribers:
+            response = self.handle_get(subscriber, max_posts=10)   # TODO max_posts ??
+
+            if response["status"] == "ok":
+                timelines.append(response["timeline"])
+            # TODO what if error?
+
+        return OkResponse({"timeline": MergedTimeline(timelines)})
+
+    async def handle_people_i_may_know(self, max_users):
+        return ErrorResponse("Not implemented.")  # TODO
 
     async def update_cached_timelines(self, max_cached_posts):
         # TODO this is where we should go to everyone we subscribed and ask for the latest timeline
