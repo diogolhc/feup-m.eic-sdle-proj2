@@ -1,3 +1,4 @@
+"""Base class for LocalConnection and PublicConnection."""
 from src.connection.response import ErrorResponse
 import logging
 import json
@@ -7,6 +8,7 @@ log = logging.getLogger('timeline')
 
 class BaseConnection:
     async def handle_command(self, command, message):
+        """Virtual method to be implemented by subclasses."""
         pass
 
     async def handle_request(self, reader, writer):

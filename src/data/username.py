@@ -1,3 +1,4 @@
+"""A username is a combination of an IP address and the public port of a node."""
 from src.validator import IpPortValidator
 
 class Username:

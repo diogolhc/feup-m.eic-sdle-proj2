@@ -1,3 +1,4 @@
+"""Represents a response to a request, ok or error."""
 class Response:
     def __init__(self, status, data=None):
         self.status = status

@@ -1,3 +1,4 @@
+"""Abstracts sending a request to a given IP and Port, assuming that the data and response are dictionaries serialized to JSON."""
 import json
 import logging
 import asyncio

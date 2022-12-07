@@ -1,9 +1,11 @@
+"""A server that listens to other nodes."""
 from src.connection.base import BaseConnection
 from src.connection.response import ErrorResponse
-from src.username import Username
+from src.data.username import Username
 import logging
 
-log = logging.getLogger('timeline')
+log = logging.getLogger("timeline")
+
 
 class PublicConnection(BaseConnection):
     def __init__(self, handle_get_timeline):
@@ -13,7 +15,11 @@ class PublicConnection(BaseConnection):
         if command == "get-timeline":
             if "username" not in message:
                 return ErrorResponse("No username provided.")
-            return await self.handle_public_get(Username.from_str(message["username"]), 10)  # TODO handle username errors TODO max posts
+            try:
+                username = Username.from_str(message["username"])
+            except ValueError:
+                return ErrorResponse(f"Invalid username: {message['username']}")
+            return await self.handle_get_timeline(username, 10)  # TODO max posts
         else:
             return ErrorResponse("Unknown command.")
 

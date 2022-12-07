@@ -1,3 +1,4 @@
+"""Utility functions to validate and parse inputs, for example command arguments."""
 import ipaddress
 
 class PortValidator:
