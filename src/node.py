@@ -154,6 +154,7 @@ class Node:
         try:
             if not self.subscriptions.unsubscribe(username):
                 return ErrorResponse("Not subscribed.")
+            Timeline.delete(self.storage, username)
             self.subscriptions.store(self.storage)
             await self.kademlia_connection.unsubscribe(username, self.subscriptions.to_serializable())
             return OkResponse()

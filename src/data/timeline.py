@@ -53,6 +53,9 @@ class Timeline:
             )
         else:
             return Timeline(username, [])
+    
+    def delete(storage, username):
+        storage.delete(Timeline.get_file(storage, username))
 
     def pretty_str(self):
         return f"Pretty output not implemented.\n{self.posts}"  # TODO
