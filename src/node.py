@@ -2,7 +2,7 @@
 import asyncio
 import logging
 from src.data.timeline import Timeline
-from data.merged_timeline import MergedTimeline
+from src.data.merged_timeline import MergedTimeline
 from src.data.subscriptions import Subscriptions
 from src.data.storage import PersistentStorage
 from src.connection import (
