@@ -180,7 +180,7 @@ class Node:
             else:
                 warnings.append(response["error"] + "-" + subscriber)
 
-        return OkResponse({"timeline": MergedTimeline(timelines, max_posts)}, warnings=warnings)
+        return OkResponse({"timeline": MergedTimeline(timelines, max_posts), "warnings": warnings})
 
     async def handle_people_i_may_know(self, max_users):
         return ErrorResponse("Not implemented.")  # TODO
