@@ -1,7 +1,6 @@
 """Classes to represent a timeline of posts from a user and a cached timeline."""
 from tabulate import tabulate
 from datetime import datetime, timedelta
-import dateutil.parser
 from src.data.username import Username
 import os
 
@@ -59,13 +58,23 @@ class Timeline:
         storage.delete(Timeline.get_file(storage, username))
 
     def pretty_str(self):
-        p = list(map(lambda p: {"id": p["id"],
-                                "timestamp": datetime.fromisoformat(p["timestamp"]),
-                                "content": p["content"]}, self.posts))
+        posts = [{
+            "id": p["id"],
+            "timestamp": datetime.fromisoformat(p["timestamp"]),
+            "content": p["content"]
+        } for p in self.posts]
 
-        p = sorted(p, key=lambda x: x["timestamp"], reverse=True)
+        posts.sort(key=lambda x: x["timestamp"], reverse=True)
 
-        return tabulate([[post["id"], post["timestamp"].strftime("%Y-%m-%d %H:%M:%S"), post["content"]] for post in p], headers=["id", "time", "content"])
+        def table_row(post):
+            return [
+                post["id"], 
+                post["timestamp"].strftime("%Y-%m-%d %H:%M:%S"), 
+                post["content"]
+            ]
+
+        tabledata = [table_row(post) for post in posts]
+        return tabulate(tabledata, headers=["id", "time", "content"])
 
     def cache(self, max_posts, time_to_live=None):
         now = datetime.now()
@@ -106,7 +115,7 @@ class TimelineCache(Timeline):
 
     def from_serializable(data):
         data["username"] = Username.from_str(data["username"])
-        data["last_updated"] = dateutil.parser.parse(data["last_updated"])
+        data["last_updated"] = datetime.fromisoformat(data["last_updated"])
         if data["valid_until"] is not None:
-            data["valid_until"] = dateutil.parser.parse(data["valid_until"])
+            data["valid_until"] = datetime.fromisoformat(data["valid_until"])
         return TimelineCache(**data)
