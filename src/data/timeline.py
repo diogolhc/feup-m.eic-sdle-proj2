@@ -1,4 +1,5 @@
 """Classes to represent a timeline of posts from a user and a cached timeline."""
+from tabulate import tabulate
 from datetime import datetime, timedelta
 import dateutil.parser
 from src.data.username import Username
@@ -58,7 +59,13 @@ class Timeline:
         storage.delete(Timeline.get_file(storage, username))
 
     def pretty_str(self):
-        return f"Pretty output not implemented.\n{self.posts}"  # TODO
+        p = list(map(lambda p: {"id": p["id"],
+                                "timestamp": datetime.fromisoformat(p["timestamp"]),
+                                "content": p["content"]}, self.posts))
+
+        p = sorted(p, key=lambda x: x["timestamp"], reverse=True)
+
+        return tabulate([[post["id"], post["timestamp"].strftime("%Y-%m-%d %H:%M:%S"), post["content"]] for post in p], headers=["id", "time", "content"])
 
     def cache(self, max_posts, time_to_live=None):
         now = datetime.now()
