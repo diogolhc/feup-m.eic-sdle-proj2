@@ -30,7 +30,7 @@ class Node:
         # Connections
         self.kademlia_connection = KademliaConnection(self.username)
         self.local_connection = LocalConnection(
-            self.handle_get, self.handle_post, self.handle_sub, self.handle_unsub
+            self.handle_get, self.handle_post, self.handle_sub, self.handle_unsub, self.handle_view, self.handle_people_i_may_know
         )
         self.public_connection = PublicConnection(self.handle_public_get)
 

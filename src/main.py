@@ -1,7 +1,7 @@
 """Main script. Parses arguments and calls the appropriate function, either in src.node or in src.operation."""
 import argparse
 from src.node import Node
-from src.operation import get, post, sub, unsub
+from src.operation import get, post, sub, unsub, view, people_i_may_know
 from src.validator import IpPortValidator, PortValidator, PositiveIntegerValidator
 import logging
 import asyncio
@@ -21,7 +21,9 @@ def parse_arguments():
     get_parser = subparsers.add_parser("get", description="Find a user's timeline.")
     sub_parser = subparsers.add_parser("sub", description="Subscribe to a user's timeline.")
     unsub_parser = subparsers.add_parser("unsub", description="Unsubscribe to a user's timeline.")
-    all_parsers = [start_parser, post_parser, get_parser, sub_parser, unsub_parser]
+    view_parser = subparsers.add_parser("view", description="View your feed with the posts made by you and the users you are subscribed to.")
+    may_know_parser = subparsers.add_parser("people-i-may-know", description="Find people you may know based on your subscriptions.")
+    all_parsers = [start_parser, post_parser, get_parser, sub_parser, unsub_parser, view_parser, may_know_parser]
 
     for subparser in all_parsers:
         # Adding command here instead of main parser so that they appear
@@ -39,6 +41,8 @@ def parse_arguments():
     get_parser.add_argument("max-posts", help="Limit the number of posts to get.", type=PositiveIntegerValidator.positive_integer, default=None, nargs="?")
     sub_parser.add_argument("userid", help="ID of user to subscribe to.", type=IpPortValidator(Node.DEFAULT_PUBLIC_PORT).ip_address)
     unsub_parser.add_argument("userid", help="ID of user to unsubscribe from.", type=IpPortValidator(Node.DEFAULT_PUBLIC_PORT).ip_address)
+    view_parser.add_argument("max-posts", help="Limit the number of posts to get.", type=PositiveIntegerValidator.positive_integer, default=None, nargs="?")
+    may_know_parser.add_argument("max-users", help="Limit the number of users to get.", type=PositiveIntegerValidator.positive_integer, default=None, nargs="?")
 
     for subparser in all_parsers:
         # Adding command here so it appears at the end of the help
@@ -70,6 +74,10 @@ def main():
         run = sub(args.userid, local_port=args.local_port)
     elif args.command == "unsub":
         run = unsub(args.userid, local_port=args.local_port)
+    elif args.command == "view":
+        run = view(local_port=args.local_port, max_posts=args.max_posts)
+    elif args.command == "people-i-may-know":
+        run = people_i_may_know(None, local_port=args.local_port, max_users=args.max_users)
     
     asyncio.run(run, debug=args.debug)
 

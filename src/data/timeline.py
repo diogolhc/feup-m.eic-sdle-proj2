@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 from src.data.username import Username
 import os
 
-
 class Timeline:
     TIMELINES_FOLDER = "timelines"
 

@@ -47,3 +47,15 @@ async def unsub(username, local_port):
 
     if response["status"] == "ok":
         print(f"Successfully unsubscribed from {username}.")
+
+async def view(local_port, max_posts=None):
+    response = await execute({"command": "view", "max-posts": max_posts}, local_port)
+
+    if response["status"] == "ok":
+        print(MergedTimeline.from_serializable(response["timeline"]).pretty_str())
+
+async def people_i_may_know(local_port, max_users=None):
+    response = await execute({"command": "people-i-may-know", "max-users": max_users}, local_port)
+
+    if response["status"] == "ok":
+        print(response["users"].pretty_str())
