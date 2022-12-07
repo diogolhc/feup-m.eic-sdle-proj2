@@ -29,3 +29,9 @@ class PersistentStorage:
     def read(self, *paths):
         with open(self.get_path(*paths), "r") as f:
             return json.loads(f.read())
+    
+    def delete(self, *paths):
+        try:
+            os.remove(self.get_path(*paths))
+        except OSError:
+            pass

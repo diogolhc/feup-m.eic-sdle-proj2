@@ -61,10 +61,10 @@ class Node:
         if Timeline.exists(self.storage, username):
             try:
                 timeline = Timeline.read(self.storage, username)
-                # TODO check if timeline is up to date/valid
-                return OkResponse(
-                    {"timeline": timeline.cache(max_posts).to_serializable()}
-                )
+                if timeline.is_valid():
+                    return OkResponse(
+                        {"timeline": timeline.cache(max_posts).to_serializable()}
+                    )
             except Exception as e:
                 print("Could not read timeline from storage.", e)
 
@@ -146,6 +146,7 @@ class Node:
             return ErrorResponse("Could not subscribe.")
 
     async def handle_unsub(self, username):
+        # TODO we need to remove the cached timeline
         if username == self.username:
             return ErrorResponse("Cannot unsubscribe from self.")
         
@@ -153,6 +154,7 @@ class Node:
         try:
             if not self.subscriptions.unsubscribe(username):
                 return ErrorResponse("Not subscribed.")
+            Timeline.delete(self.storage, username)
             self.subscriptions.store(self.storage)
             await self.kademlia_connection.unsubscribe(username, self.subscriptions.to_serializable())
             return OkResponse()

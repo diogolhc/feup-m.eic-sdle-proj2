@@ -1,6 +1,7 @@
 """Classes to represent a timeline of posts from a user and a cached timeline."""
 from tabulate import tabulate
 from datetime import datetime, timedelta
+import dateutil.parser
 from src.data.username import Username
 import os
 
@@ -11,6 +12,9 @@ class Timeline:
     def __init__(self, username, posts):
         self.username = username
         self.posts = posts
+    
+    def is_valid(self):
+        return True # A non-cached timeline is always valid
 
     def add_post(self, post):
         self.posts.append({
@@ -24,6 +28,8 @@ class Timeline:
         self.posts.remove(post)
 
     def from_serializable(data):
+        if "valid_until" in data:
+            return TimelineCache.from_serializable(data)
         data["username"] = Username.from_str(data["username"])
         return Timeline(**data)
 
@@ -48,6 +54,9 @@ class Timeline:
             )
         else:
             return Timeline(username, [])
+    
+    def delete(storage, username):
+        storage.delete(Timeline.get_file(storage, username))
 
     def pretty_str(self):
         p = list(map(lambda p: {"id": p["id"],
@@ -59,16 +68,14 @@ class Timeline:
         return tabulate([[post["id"], post["timestamp"].strftime("%Y-%m-%d %H:%M:%S"), post["content"]] for post in p], headers=["id", "time", "content"])
 
     def cache(self, max_posts, time_to_live=None):
-        data = self.to_serializable()
-        data["posts"] = data["posts"][:max_posts]
-        data["total_posts"] = len(self.posts)
         now = datetime.now()
-        data["last_updated"] = now.isoformat()
-        if time_to_live is None:
-            data["valid_until"] = None
-        else:
-            data["valid_until"] = (now + timedelta(seconds=time_to_live)).isoformat()
-        return TimelineCache.from_serializable(data)
+        return TimelineCache(
+            username=self.username,
+            posts=self.posts[:max_posts],
+            total_posts=len(self.posts),
+            last_updated=now,
+            valid_until=now + timedelta(seconds=time_to_live),
+        )
 
 
 class TimelineCache(Timeline):
@@ -77,6 +84,9 @@ class TimelineCache(Timeline):
         self.total_posts = total_posts
         self.last_updated = last_updated
         self.valid_until = valid_until
+    
+    def is_valid(self):
+        return self.valid_until is None or datetime.now() < self.valid_until
 
     def cache(self, max_posts):
         data = self.to_serializable()
@@ -84,6 +94,16 @@ class TimelineCache(Timeline):
 
         return TimelineCache.from_serializable(**data)
 
+    def to_serializable(self):
+        data = super().to_serializable()
+        data["last_updated"] = data["last_updated"].isoformat()
+        if data["valid_until"] is not None:
+            data["valid_until"] = data["valid_until"].isoformat()
+        return data
+
     def from_serializable(data):
         data["username"] = Username.from_str(data["username"])
+        data["last_updated"] = dateutil.parser.parse(data["last_updated"])
+        if data["valid_until"] is not None:
+            data["valid_until"] = dateutil.parser.parse(data["valid_until"])
         return TimelineCache(**data)
