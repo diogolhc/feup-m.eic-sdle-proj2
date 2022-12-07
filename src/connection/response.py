@@ -16,13 +16,13 @@ class Response:
 
         if self.warnings is not None:
             data["warnings"] = self.warnings
-            
+
         return data
 
 class OkResponse(Response):
-    def __init__(self, data=None):
-        super().__init__("ok", data)
+    def __init__(self, data=None, warnings=None):
+        super().__init__("ok", data, warnings)
 
 class ErrorResponse(Response):
-    def __init__(self, message):
-        super().__init__("error", {"error": message})
+    def __init__(self, message, warnings=None):
+        super().__init__("error", {"error": message}, warnings)
