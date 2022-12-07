@@ -2,7 +2,6 @@
 from tabulate import tabulate
 from datetime import datetime
 
-
 class MergedTimeline:
     def __init__(self, timelines):
         self.timelines = timelines
