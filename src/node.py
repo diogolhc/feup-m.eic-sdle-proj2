@@ -2,6 +2,7 @@
 import asyncio
 import logging
 from src.data.timeline import Timeline
+from src.data.merged_timelines import MergedTimeline
 from src.data.subscriptions import Subscriptions
 from src.data.storage import PersistentStorage
 from src.connection import (
@@ -162,6 +163,18 @@ class Node:
             self.subscriptions.subscriptions = subscriptions_backup
             print("Could not unsubscribe.", e)
             return ErrorResponse("Could not unsubscribe.")
+
+    async def handle_view(self):
+        timelines = []
+
+        for subscriber in self.subscribers:
+            response = self.handle_get(subscriber, max_posts=10)   # TODO max_posts ??
+
+            if response["status"] == "ok":
+                timelines.append(response["timeline"])
+            # TODO what if error?
+
+        return OkResponse({"timeline": MergedTimeline(timelines)})
 
     async def update_cached_timelines(self, max_cached_posts):
         # TODO this is where we should go to everyone we subscribed and ask for the latest timeline
