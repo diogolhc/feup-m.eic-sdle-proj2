@@ -1,14 +1,22 @@
 """Represents a response to a request, ok or error."""
 class Response:
-    def __init__(self, status, data=None):
+    def __init__(self, status, data=None, warnings=None):
         self.status = status
         self.data = data
+        self.warnings = warnings
 
     def to_dict(self):
         if self.data is None:
-            return {"status": self.status}
+            if self.warnings is None:
+                return {"status": self.status}
+            else: 
+                return {"status": self.status, "warnings": self.warnings}
         data = self.data.copy()
         data["status"] = self.status
+
+        if self.warnings is not None:
+            data["warnings"] = self.warnings
+            
         return data
 
 class OkResponse(Response):

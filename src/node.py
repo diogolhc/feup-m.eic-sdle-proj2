@@ -2,7 +2,7 @@
 import asyncio
 import logging
 from src.data.timeline import Timeline
-from data.merged_timeline import MergedTimeline
+from src.data.merged_timeline import MergedTimeline
 from src.data.subscriptions import Subscriptions
 from src.data.storage import PersistentStorage
 from src.connection import (
@@ -165,16 +165,22 @@ class Node:
             return ErrorResponse("Could not unsubscribe.")
 
     async def handle_view(self, max_posts):
-        timelines = []
+        timelines = [self.timeline]
+        warnings = []
+
+        subscribers = await self.kademlia_connection.get_subscribers(self.username)
+        if subscribers is None:
+            return ErrorResponse(f"No available source found.")
 
         for subscriber in self.subscribers:
-            response = self.handle_get(subscriber, max_posts=10)   # TODO max_posts ??
+            response = self.handle_get(subscriber, max_posts=None)
 
             if response["status"] == "ok":
                 timelines.append(response["timeline"])
-            # TODO what if error?
+            else:
+                warnings.append(response["error"] + "-" + subscriber)
 
-        return OkResponse({"timeline": MergedTimeline(timelines)})
+        return OkResponse({"timeline": MergedTimeline(timelines, max_posts), "warnings": warnings})
 
     async def handle_people_i_may_know(self, max_users):
         return ErrorResponse("Not implemented.")  # TODO
