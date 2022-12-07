@@ -16,9 +16,9 @@ async def execute(data, local_port):
     return response
 
 
-async def get(username, local_port):
+async def get(username, local_port, max_posts=None):
     username = Username(username)
-    response = await execute({"command": "get", "username": str(username)}, local_port)
+    response = await execute({"command": "get", "username": str(username), "max-posts": max_posts}, local_port)
 
     if response["status"] == "ok":
         print(TimelineCache.from_serializable(response["timeline"]).pretty_str())

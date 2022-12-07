@@ -64,7 +64,7 @@ class Timeline:
         now = datetime.now()
         return TimelineCache(
             username=self.username,
-            posts=self.posts[:max_posts],
+            posts=self.posts if max_posts is None else self.posts[:max_posts],
             total_posts=len(self.posts),
             last_updated=now,
             valid_until=now + timedelta(seconds=time_to_live),
@@ -82,10 +82,13 @@ class TimelineCache(Timeline):
         return self.valid_until is None or datetime.now() < self.valid_until
 
     def cache(self, max_posts):
-        data = self.to_serializable()
-        data["posts"] = data["posts"][:max_posts]
-
-        return TimelineCache.from_serializable(**data)
+        return TimelineCache(
+            username=self.username,
+            posts=self.posts if max_posts is None else self.posts[:max_posts],
+            total_posts=self.total_posts,
+            last_updated=self.last_updated,
+            valid_until=self.valid_until,
+        )
 
     def to_serializable(self):
         data = super().to_serializable()

@@ -18,11 +18,13 @@ class LocalConnection(BaseConnection):
         if command == "get":
             if "username" not in message:
                 return ErrorResponse("No username provided.")
+            if "max-posts" not in message:
+                message["max-posts"] = None
             try:
                 username = Username.from_str(message["username"])
             except ValueError:
                 return ErrorResponse(f"Invalid username: {message['username']}")
-            return await self.handle_get(username, 10)  # TODO max posts
+            return await self.handle_get(username, message['max-posts'])
         elif command == "post":
             if "filepath" not in message:
                 return ErrorResponse("No filepath provided.")

@@ -15,11 +15,13 @@ class PublicConnection(BaseConnection):
         if command == "get-timeline":
             if "username" not in message:
                 return ErrorResponse("No username provided.")
+            if "max-posts" not in message:
+                message["max-posts"] = None
             try:
                 username = Username.from_str(message["username"])
             except ValueError:
                 return ErrorResponse(f"Invalid username: {message['username']}")
-            return await self.handle_get_timeline(username, 10)  # TODO max posts
+            return await self.handle_get_timeline(username, message['max-posts'])
         else:
             return ErrorResponse("Unknown command.")
 

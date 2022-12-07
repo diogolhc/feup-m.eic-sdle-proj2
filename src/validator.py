@@ -37,3 +37,11 @@ class IpPortValidator:
         ip = IpValidator.ip_address(parts[0])
 
         return (ip, port)
+
+class PositiveIntegerValidator:
+    def positive_integer(s):
+        """Validates and parses a positive integer."""
+        i = int(s)
+        if i <= 0:
+            raise ValueError
+        return i

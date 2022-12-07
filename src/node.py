@@ -19,6 +19,7 @@ log = logging.getLogger("timeline")
 
 class Node:
     DEFAULT_SLEEP_TIME_BETWEEN_CACHING = 10
+    DEFAULT_MAX_CACHED_POSTS = 10
     DEFAULT_PUBLIC_PORT = 8000
     DEFAULT_KADEMLIA_PORT = 8468
     DEFAULT_LOCAL_PORT = 8600
@@ -80,7 +81,7 @@ class Node:
         data = {
             "command": "get-timeline",
             "username": str(username),
-            "max_posts": max_posts,
+            "max-posts": max_posts,
         }
 
         log.debug("Connecting to %s", username)
@@ -146,7 +147,6 @@ class Node:
             return ErrorResponse("Could not subscribe.")
 
     async def handle_unsub(self, username):
-        # TODO we need to remove the cached timeline
         if username == self.username:
             return ErrorResponse("Cannot unsubscribe from self.")
         
@@ -163,11 +163,11 @@ class Node:
             print("Could not unsubscribe.", e)
             return ErrorResponse("Could not unsubscribe.")
 
-    async def update_cached_timelines(self):
+    async def update_cached_timelines(self, max_cached_posts):
         # TODO this is where we should go to everyone we subscribed and ask for the latest timeline
         pass
 
-    async def run(self, port, bootstrap_nodes, local_port, cache_frequency):
+    async def run(self, port, bootstrap_nodes, local_port, cache_frequency, max_cached_posts):
         # TODO the teacher talked about synchronizing clocks between nodes, but I don't know why that would be necessary in this project.
         #      anyway, if we decide to do that, it should be done only after everything else is done, probably.
         await self.kademlia_connection.start(port, bootstrap_nodes)
@@ -175,5 +175,5 @@ class Node:
         asyncio.create_task(self.public_connection.start(self.username))
 
         while True:
-            await self.update_cached_timelines()
+            await self.update_cached_timelines(max_cached_posts)
             await asyncio.sleep(cache_frequency)
