@@ -134,7 +134,7 @@ class TimelineCache(Timeline):
         self.valid_until = valid_until
 
     def is_valid(self):
-        return True # TODO remove this is for debug
+        return True # TODO adjust valid until for a reasonable interval
         return self.valid_until is None or datetime.now() < self.valid_until
 
     def cache(self, max_posts):
