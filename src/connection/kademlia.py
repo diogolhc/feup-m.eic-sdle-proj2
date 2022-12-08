@@ -1,4 +1,5 @@
 """Handles and abstracts the connection to the kademlia DHT network."""
+from src.data.username import Username
 from src.validator import IpPortValidator
 import logging
 import json
@@ -26,18 +27,18 @@ class KademliaConnection:
         await self.set_subscription(f"{username}-subscribers", self.username, False)
 
     async def get_subscribers(self, username):
-        response = self.get(f"{username}-subscribers")
+        response = await self.get(f"{username}-subscribers")
         if response is None:
             return []
         
-        return [IpPortValidator().ip_address(s) for s in response]
+        return [Username(IpPortValidator().ip_address(s)) for s in response]
     
     async def get_subscribed(self, username):
-        response = self.get(f"{username}-subscribed")
+        response = await self.get(f"{username}-subscribed")
         if response is None:
             return []
         
-        return [IpPortValidator().ip_address(s) for s in response]
+        return [Username(IpPortValidator().ip_address(s)) for s in response]
     
     async def set_subscription(self, key, target, subscribed):
         response = await self.get(key)

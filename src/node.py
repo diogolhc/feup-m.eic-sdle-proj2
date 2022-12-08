@@ -90,8 +90,8 @@ class Node:
                 return ErrorResponse(f"No available source found.")
 
         for subscriber in subscribers:
-            log.debug("Connecting to subscriber %s:%s", subscriber[0], subscriber[1])
-            response = await request(data, subscriber[0], subscriber[1])
+            log.debug("Connecting to subscriber %s:%s", subscriber.ip, subscriber.port)
+            response = await request(data, subscriber.ip, subscriber.port)
             if response["status"] == "ok":
                 timeline = Timeline.from_serializable(response["timeline"])
                 if timeline.last_updated <= last_updated_after:
@@ -103,8 +103,8 @@ class Node:
             else:
                 log.debug(
                     "Subscriber %s:%s responded with error: %s",
-                    subscriber[0],
-                    subscriber[1],
+                    subscriber.ip,
+                    subscriber.port,
                     response["error"],
                 )
 
