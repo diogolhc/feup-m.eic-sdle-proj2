@@ -1,5 +1,5 @@
 """Handles and abstracts the connection to the kademlia DHT network."""
-from src.data.username import Username
+from src.data.user import User
 from src.validator import IpPortValidator
 import asyncio
 import random
@@ -7,46 +7,47 @@ import logging
 import json
 from kademlia.network import Server
 
-log = logging.getLogger('timeline')
+log = logging.getLogger("timeline")
+
 
 class KademliaConnection:
     BACKOFF_RATE = 1.5
     BACKOFF_MIN_RANDOM_WAIT_S = 0.2
     BACKOFF_MAX_RANDOM_WAIT_S = 1.0
-    MAX_BACKOFF_S = 10 # TODO: maybe this should be configured alongside cache period
+    MAX_BACKOFF_S = 10  # TODO: maybe this should be configured alongside cache period
 
-    def __init__(self, username):
+    def __init__(self, userid):
         self.connection = None
-        self.username = username
-    
-    async def subscribe(self, username, subscriptions):
+        self.userid = userid
+
+    async def subscribe(self, userid, subscriptions):
         # This node owns this key. It can just set the value without worries.
-        await self.put(f"{username}-subscribed", [s.__str__() for s in subscriptions])
+        await self.put(f"{userid}-subscribed", [s.__str__() for s in subscriptions])
 
         # This key is shared, so the logic is more complicated
-        await self.set_subscription(f"{username}-subscribers", self.username, True)
-    
-    async def unsubscribe(self, username, subscriptions):
+        await self.set_subscription(f"{userid}-subscribers", self.userid, True)
+
+    async def unsubscribe(self, userid, subscriptions):
         # This node owns this key. It can just set the value without worries.
-        await self.put(f"{username}-subscribed", [s.__str__() for s in subscriptions])
+        await self.put(f"{userid}-subscribed", [s.__str__() for s in subscriptions])
 
         # This key is shared, so the logic is more complicated
-        await self.set_subscription(f"{username}-subscribers", self.username, False)
+        await self.set_subscription(f"{userid}-subscribers", self.userid, False)
 
-    async def get_subscribers(self, username):
-        response = await self.get(f"{username}-subscribers")
+    async def get_subscribers(self, userid):
+        response = await self.get(f"{userid}-subscribers")
         if response is None:
             return []
-        
-        return [Username(IpPortValidator().ip_address(s)) for s in response]
 
-    async def get_subscribed(self, username):
-        response = await self.get(f"{username}-subscribed")
+        return [User(IpPortValidator().ip_address(s)) for s in response]
+
+    async def get_subscribed(self, userid):
+        response = await self.get(f"{userid}-subscribed")
         if response is None:
             return []
-        
-        return [Username(IpPortValidator().ip_address(s)) for s in response]
-    
+
+        return [User(IpPortValidator().ip_address(s)) for s in response]
+
     async def set_subscription(self, key, target, subscribed):
         # Exponential backoff and multiple tries to minimize concurrency issues
         subscription = str(target)
@@ -55,7 +56,7 @@ class KademliaConnection:
             response = []
 
         n = -1
-        while (True):
+        while True:
             n += 1
             log.debug(f"(un)sub iter: {n} ; key: {key} ; value: {response}")
             # Update the value
@@ -75,15 +76,24 @@ class KademliaConnection:
                     break
 
             # Exponential backoff
-            backoff = min(KademliaConnection.BACKOFF_RATE**n, KademliaConnection.MAX_BACKOFF_S)
-            backoff += random.uniform(KademliaConnection.BACKOFF_MIN_RANDOM_WAIT_S, KademliaConnection.BACKOFF_MAX_RANDOM_WAIT_S)
+            backoff = min(
+                KademliaConnection.BACKOFF_RATE**n, KademliaConnection.MAX_BACKOFF_S
+            )
+            backoff += random.uniform(
+                KademliaConnection.BACKOFF_MIN_RANDOM_WAIT_S,
+                KademliaConnection.BACKOFF_MAX_RANDOM_WAIT_S,
+            )
 
-            log.debug("Waiting %s seconds before checking for concurrency issues", backoff)
+            log.debug(
+                "Waiting %s seconds before checking for concurrency issues", backoff
+            )
             await asyncio.sleep(backoff)
 
             # Check if the value has changed in the meantime
             updated_response = await self.get(key)
-            log.debug(f"(un)sub iter: {n} ; UPDATED ; key: {key} ; value: {updated_response}")
+            log.debug(
+                f"(un)sub iter: {n} ; UPDATED ; key: {key} ; value: {updated_response}"
+            )
             if updated_response is None:
                 updated_response = []
 
@@ -107,7 +117,7 @@ class KademliaConnection:
         if response is None:
             return None
         return json.loads(response)
-    
+
     async def put(self, key, value):
         await self.connection.set(key, json.dumps(value))
 
@@ -115,9 +125,9 @@ class KademliaConnection:
         self.connection = Server()
 
         await self.connection.listen(port)
-        
+
         if len(bootstrap_nodes) > 0:
             log.debug("Bootstrapping with %s", bootstrap_nodes)
             await self.connection.bootstrap(bootstrap_nodes)
-        
+
         log.debug("Ready to listen to peers on kademlia port %s", port)

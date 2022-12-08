@@ -1,7 +1,8 @@
 """Classes to represent a Merged timeline of posts from several users."""
 from datetime import datetime
 from tabulate import tabulate
-from src.data.username import Username
+from src.data.user import User
+
 
 class MergedTimeline:
     def __init__(self, posts):
@@ -15,25 +16,31 @@ class MergedTimeline:
             posts = timeline.posts
 
             for post in posts:
-                post["username"] = timeline.username
+                post["userid"] = timeline.userid
 
             all_posts.extend(posts)
 
-        posts = [{
-            "id": p["id"],
-            "username": p["username"],
-            "timestamp": datetime.fromisoformat(p["timestamp"]),
-            "content": p["content"]
-        } for p in all_posts]
+        posts = [
+            {
+                "id": p["id"],
+                "userid": p["userid"],
+                "timestamp": datetime.fromisoformat(p["timestamp"]),
+                "content": p["content"],
+            }
+            for p in all_posts
+        ]
 
         posts.sort(key=lambda x: x["timestamp"], reverse=True)
 
-        all_posts = [{
-            "id": p["id"],
-            "username": p["username"],
-            "timestamp": p["timestamp"].isoformat(),
-            "content": p["content"]
-        } for p in posts]
+        all_posts = [
+            {
+                "id": p["id"],
+                "userid": p["userid"],
+                "timestamp": p["timestamp"].isoformat(),
+                "content": p["content"],
+            }
+            for p in posts
+        ]
 
         return MergedTimeline(all_posts if max_posts is None else all_posts[:max_posts])
 
@@ -41,7 +48,7 @@ class MergedTimeline:
     def from_serializable(data):
 
         for p in data["posts"]:
-            p["username"] = Username.from_str(p["username"])
+            p["userid"] = User.from_str(p["userid"])
 
         return MergedTimeline(**data)
 
@@ -49,27 +56,30 @@ class MergedTimeline:
         data = self.__dict__.copy()
 
         for p in data["posts"]:
-            p["username"] = str(p["username"])
+            p["userid"] = str(p["userid"])
 
         return data
 
     def pretty_str(self):
-        posts = [{
-            "id": p["id"],
-            "username": p["username"],
-            "timestamp": datetime.fromisoformat(p["timestamp"]),
-            "content": p["content"]
-        } for p in self.posts]
+        posts = [
+            {
+                "id": p["id"],
+                "userid": p["userid"],
+                "timestamp": datetime.fromisoformat(p["timestamp"]),
+                "content": p["content"],
+            }
+            for p in self.posts
+        ]
 
         posts.sort(key=lambda x: x["timestamp"], reverse=True)
 
         def table_row(post):
             return [
                 post["id"],
-                str(post["username"]),
+                str(post["userid"]),
                 post["timestamp"].strftime("%Y-%m-%d %H:%M:%S"),
-                post["content"]
+                post["content"],
             ]
 
         tabledata = [table_row(post) for post in posts]
-        return tabulate(tabledata, headers=["id", "username", "time", "content"])
+        return tabulate(tabledata, headers=["id", "userid", "time", "content"])

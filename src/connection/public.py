@@ -1,7 +1,7 @@
 """A server that listens to other nodes."""
 from src.connection.base import BaseConnection
 from src.connection.response import ErrorResponse
-from src.data.username import Username
+from src.data.user import User
 import logging
 
 log = logging.getLogger("timeline")
@@ -13,18 +13,18 @@ class PublicConnection(BaseConnection):
 
     async def handle_command(self, command, message):
         if command == "get-timeline":
-            if "username" not in message:
-                return ErrorResponse("No username provided.")
+            if "userid" not in message:
+                return ErrorResponse("No userid provided.")
             if "max-posts" not in message:
                 message["max-posts"] = None
             try:
-                username = Username.from_str(message["username"])
+                userid = User.from_str(message["userid"])
             except ValueError:
-                return ErrorResponse(f"Invalid username: {message['username']}")
-            return await self.handle_get_timeline(username, message['max-posts'])
+                return ErrorResponse(f"Invalid userid: {message['userid']}")
+            return await self.handle_get_timeline(userid, message["max-posts"])
         else:
             return ErrorResponse("Unknown command.")
 
-    async def start(self, username):
-        debug_message = lambda: log.debug("Listening for other nodes on %s", username)
-        await super().start(username.ip, username.port, debug_message)
+    async def start(self, userid):
+        debug_message = lambda: log.debug("Listening for other nodes on %s", userid)
+        await super().start(userid.ip, userid.port, debug_message)
