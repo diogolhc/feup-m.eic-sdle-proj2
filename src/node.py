@@ -105,22 +105,21 @@ class Node:
             log.debug("Connecting to subscriber %s:%s", subscriber.ip, subscriber.port)
             response = await request(data, subscriber.ip, subscriber.port)
             if response["status"] == "ok":
+                log.debug("Timeline received")
+
                 timeline_t = Timeline.from_serializable(response["timeline"])
 
-                if timeline_t.last_updated == last_update_check and rnd.randint(0, 100) < HEURISTIC_PROBABILITY and timeline:
-                    break
-
-                if timeline_t.last_updated < last_update_check: # The timeline is older than the current one
-                    if timeline:
+                if last_update_check: # TODO fix this
+                    if timeline_t.last_updated == last_update_check and rnd.randint(0, 100) < HEURISTIC_PROBABILITY and timeline:
                         break
-                    else:
-                        continue
-                
-                log.debug("Checking subscriber")
+                    if timeline_t.last_updated < last_update_check: # The timeline is older than the current one
+                        if timeline:
+                            break
+                        else:
+                            continue
 
                 timeline = response["timeline"]
                 last_update_check = timeline_t.last_updated
-
             else:
                 log.debug(
                     "Subscriber %s:%s responded with error: %s",
@@ -130,7 +129,7 @@ class Node:
                 )
 
         if (not timeline) :
-            return ErrorResponse(f"No available source found.")
+            return ErrorResponse(f"No available source found. HERE1 " + str(len(subscribers)))
         else :
             return OkResponse({"timeline": timeline})
         

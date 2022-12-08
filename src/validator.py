@@ -25,7 +25,7 @@ class IpPortValidator:
 
     def ip_address(self, s):
         """Validates and parses an ip:port pair."""
-        parts = s.split(':')
+        parts = str(s).split(':')
 
         if len(parts) == 1:
             if self.default_port is None:
