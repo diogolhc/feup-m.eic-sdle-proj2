@@ -246,7 +246,7 @@ class Node:
                     common[sub] = {subscription}
 
         response = []
-        response = [{"userid": s, "common": common[s]} for s in suggestions]
+        response = [{"userid": s, "common": list(common[s])} for s in suggestions]
 
         response.sort(key=lambda x: len(x["common"]), reverse=True)
 
