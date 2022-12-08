@@ -20,6 +20,7 @@ class Subscriptions:
             return True
         return False
     
+    @staticmethod
     def from_serializable(data):
         return Subscriptions([Username.from_str(sub) for sub in data])
 
@@ -29,6 +30,7 @@ class Subscriptions:
     def store(self, storage):
         storage.write(self.to_serializable(), Subscriptions.SUBSCRIPTIONS_FILE)
 
+    @staticmethod
     def read(storage):
         if storage.exists(Subscriptions.SUBSCRIPTIONS_FILE):
             return Subscriptions.from_serializable(

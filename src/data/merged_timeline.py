@@ -1,9 +1,9 @@
 """Classes to represent a Merged timeline of posts from several users."""
-from tabulate import tabulate
 from datetime import datetime
+from tabulate import tabulate
 
 class MergedTimeline:
-    def __init__(self, timelines):
+    def __init__(self, timelines, max_posts):
         self.timelines = timelines
         self.posts = []
 
@@ -15,6 +15,25 @@ class MergedTimeline:
 
             self.posts.append(posts)
 
+        posts = [{
+            "id": p["id"],
+            "username": p["username"],
+            "timestamp": datetime.fromisoformat(p["timestamp"]),
+            "content": p["content"]
+        } for p in self.posts]
+
+        posts.sort(key=lambda x: x["timestamp"], reverse=True)
+
+        self.posts = [{
+            "id": p["id"],
+            "username": p["username"],
+            "timestamp": p["timestamp"].isoformat(),
+            "content": p["content"]
+        } for p in posts]
+    
+        self.posts = self.posts if max_posts is None else self.posts[:max_posts]
+
+    @staticmethod
     def from_serializable(data):
         return MergedTimeline(**data)
 

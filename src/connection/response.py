@@ -7,8 +7,10 @@ class Response:
     def to_dict(self):
         if self.data is None:
             return {"status": self.status}
+
         data = self.data.copy()
         data["status"] = self.status
+            
         return data
 
 class OkResponse(Response):
