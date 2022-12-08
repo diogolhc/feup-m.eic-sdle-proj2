@@ -1,5 +1,7 @@
 """Handles and abstracts the connection to the kademlia DHT network."""
 from src.validator import IpPortValidator
+import asyncio
+import random
 import logging
 import json
 from kademlia.network import Server
@@ -7,6 +9,11 @@ from kademlia.network import Server
 log = logging.getLogger('timeline')
 
 class KademliaConnection:
+    BACKOFF_RATE = 1.5
+    BACKOFF_MIN_RANDOM_WAIT_S = 0.2
+    BACKOFF_MAX_RANDOM_WAIT_S = 1.0
+    MAX_BACKOFF_S = 10 # TODO: maybe this should be configured alongside cache period
+
     def __init__(self, username):
         self.connection = None
         self.username = username
@@ -40,20 +47,60 @@ class KademliaConnection:
         return [IpPortValidator().ip_address(s) for s in response]
     
     async def set_subscription(self, key, target, subscribed):
+        # Exponential backoff and multiple tries to minimize concurrency issues
+        subscription = str(target)
         response = await self.get(key)
         if response is None:
             response = []
-        subscription = str(target)
 
-        if subscribed:
-            if subscription not in response:
-                response.append(subscription)
-                await self.put(key, response)
-        else:
-            if subscription in response:
-                response.remove(subscription)
-                await self.put(key, response)
-        # TODO this can cause concurrency issues, we should try to minimize them, for example with exponential backoff and multiple tries
+        n = -1
+        while (True):
+            n += 1
+            log.debug(f"{n} - {response}") # TODO remove
+            # Update the value
+            if subscribed:
+                if subscription not in response:
+                    response.append(subscription)
+                    await self.put(key, response)
+                    log.debug(f"{n} - put {response}") # TODO remove
+                else:
+                    break
+            else:
+                if subscription in response:
+                    response.remove(subscription)
+                    await self.put(key, response)
+                    log.debug(f"{n} - put {response}") # TODO remove
+                else:
+                    break
+
+            # Exponential backoff
+            backoff = min(KademliaConnection.BACKOFF_RATE**n, KademliaConnection.MAX_BACKOFF_S)
+            backoff += random.uniform(KademliaConnection.BACKOFF_MIN_RANDOM_WAIT_S, KademliaConnection.BACKOFF_MAX_RANDOM_WAIT_S)
+
+            log.debug("Waiting %s seconds before checking for concurrency issues", backoff)
+            await asyncio.sleep(backoff)
+
+            # Check if the value has changed in the meantime
+            updated_response = await self.get(key)
+            log.debug(f"{n} - updated: {updated_response}") # TODO remove
+            if updated_response is None:
+                log.debug("updated response is none") # TODO remove
+                updated_response = []
+
+            if subscribed:
+                if subscription in updated_response:
+                    log.debug("No concurrency issues detected")
+                    break
+                else:
+                    log.debug("Concurrency issue detected, trying again")
+                    response = updated_response
+            else:
+                if subscription not in updated_response:
+                    log.debug("No concurrency issues detected")
+                    break
+                else:
+                    log.debug("Concurrency issue detected, trying again")
+                    response = updated_response
 
     async def get(self, key):
         response = await self.connection.get(key)
