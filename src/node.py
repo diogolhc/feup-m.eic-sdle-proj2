@@ -254,5 +254,5 @@ class Node:
         self.max_cached_posts = max_cached_posts
         while True:
             for subscription in self.subscriptions.subscriptions:
-                asyncio.create_task(self.update_cached_timeline(subscription, max_cached_posts))
+                asyncio.create_task(self.update_cached_timeline(subscription))
             await asyncio.sleep(cache_frequency)
