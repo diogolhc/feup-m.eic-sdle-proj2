@@ -141,11 +141,10 @@ class Node:
             return OkResponse({"timeline": timeline.to_serializable()})
         return await self.get_peers(userid, max_posts)
 
-    async def handle_post(self, filepath):
+    async def handle_post(self, content):
         post = None
         try:
-            with open(filepath, "r") as f:
-                post = self.timeline.add_post(f.read())
+            post = self.timeline.add_post(content)
             self.timeline.store(self.storage)
             return OkResponse()
         except Exception as e:
