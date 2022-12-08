@@ -90,8 +90,8 @@ class Node:
                 return ErrorResponse(f"No available source found.")
 
         for subscriber in subscribers:
-            log.debug("Connecting to subscriber %s:%s", subscriber[0], subscriber[1])
-            response = await request(data, subscriber[0], subscriber[1])
+            log.debug("Connecting to subscriber %s:%s", subscriber.ip, subscriber.port)
+            response = await request(data, subscriber.ip, subscriber.port)
             if response["status"] == "ok":
                 timeline = Timeline.from_serializable(response["timeline"])
                 if timeline.last_updated <= last_updated_after:
@@ -104,8 +104,8 @@ class Node:
             else:
                 log.debug(
                     "Subscriber %s:%s responded with error: %s",
-                    subscriber[0],
-                    subscriber[1],
+                    subscriber.ip,
+                    subscriber.port,
                     response["error"],
                 )
 
@@ -198,7 +198,7 @@ class Node:
             else:
                 warnings.append(response["error"] + "-" + subscription)
 
-        return OkResponse({"timeline": MergedTimeline(timelines, max_posts), "warnings": warnings})
+        return OkResponse({"timeline": MergedTimeline.from_timelines(timelines, max_posts).to_serializable(), "warnings": warnings})
 
     async def handle_people_i_may_know(self, max_users):
         suggestions = set()
@@ -242,7 +242,7 @@ class Node:
             except Exception as e:
                 log.debug("Could not update cached timeline for %s: %s", username, e)
         else:
-            log.debug("Could not update cached timeline for %s: %s", username, response.error)
+            log.debug("Could not update cached timeline for %s: %s", username, response.data["error"])
 
     async def run(self, port, bootstrap_nodes, local_port, cache_frequency, max_cached_posts):
         # TODO the teacher talked about synchronizing clocks between nodes, but I don't know why that would be necessary in this project.
@@ -254,5 +254,5 @@ class Node:
         self.max_cached_posts = max_cached_posts
         while True:
             for subscription in self.subscriptions.subscriptions:
-                asyncio.create_task(self.update_cached_timeline(subscription, max_cached_posts))
+                asyncio.create_task(self.update_cached_timeline(subscription))
             await asyncio.sleep(cache_frequency)

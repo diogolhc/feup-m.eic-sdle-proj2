@@ -1,44 +1,56 @@
 """Classes to represent a Merged timeline of posts from several users."""
 from datetime import datetime
 from tabulate import tabulate
+from src.data.username import Username
 
 class MergedTimeline:
-    def __init__(self, timelines, max_posts):
-        self.timelines = timelines
-        self.posts = []
+    def __init__(self, posts):
+        self.posts = posts
 
-        for timeline in self.timelines:
+    @staticmethod
+    def from_timelines(timelines, max_posts):
+        all_posts = []
+
+        for timeline in timelines:
             posts = timeline.posts
 
             for post in posts:
                 post["username"] = timeline.username
 
-            self.posts.append(posts)
+            all_posts.extend(posts)
 
         posts = [{
             "id": p["id"],
             "username": p["username"],
             "timestamp": datetime.fromisoformat(p["timestamp"]),
             "content": p["content"]
-        } for p in self.posts]
+        } for p in all_posts]
 
         posts.sort(key=lambda x: x["timestamp"], reverse=True)
 
-        self.posts = [{
+        all_posts = [{
             "id": p["id"],
             "username": p["username"],
             "timestamp": p["timestamp"].isoformat(),
             "content": p["content"]
         } for p in posts]
-    
-        self.posts = self.posts if max_posts is None else self.posts[:max_posts]
+
+        return MergedTimeline(all_posts if max_posts is None else all_posts[:max_posts])
 
     @staticmethod
     def from_serializable(data):
+
+        for p in data["posts"]:
+            p["username"] = Username.from_str(p["username"])
+
         return MergedTimeline(**data)
 
     def to_serializable(self):
         data = self.__dict__.copy()
+
+        for p in data["posts"]:
+            p["username"] = str(p["username"])
+
         return data
 
     def pretty_str(self):
@@ -54,7 +66,7 @@ class MergedTimeline:
         def table_row(post):
             return [
                 post["id"],
-                post["username"],
+                str(post["username"]),
                 post["timestamp"].strftime("%Y-%m-%d %H:%M:%S"),
                 post["content"]
             ]

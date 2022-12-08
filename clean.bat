@@ -1,0 +1,1 @@
+rmdir data /s /q
