@@ -96,6 +96,7 @@ class Node:
                 timeline = Timeline.from_serializable(response["timeline"])
                 if timeline.last_updated <= last_updated_after:
                     continue # The timeline is older than the current one
+
                 # TODO the teacher suggested that instead of just returning this one,
                 #      we could have some heuristic probability of trying others until
                 #      we are confident that we have an updated enough timeline.
@@ -109,8 +110,19 @@ class Node:
                 )
 
         return ErrorResponse(f"No available source found.")
+    
+    async def check_not_subscribed(self, username):
+        subscribers = await self.kademlia_connection.get_subscribers(username)
+        if self.username in subscribers:
+            await self.kademlia_connection.unsubscribe(username, subscribers)
         
     async def handle_public_get(self, username, max_posts):
+        if username != self.username and username not in self.subscriptions.subscriptions:
+            # This node is not subscribed, so it is strange to receive a request
+            # Because of this, it will check the subscription value in the DHT
+            asyncio.create_task(self.check_not_subscribed(username))
+            return ErrorResponse(f"Not locally available.")            
+        
         timeline = await self.get_local(username, max_posts)
         if timeline is None:
             return ErrorResponse(f"Not locally available.")
@@ -144,15 +156,13 @@ class Node:
             return ErrorResponse("Cannot subscribe to self.")
         
         subscriptions_backup = self.subscriptions.subscriptions.copy()
-        # TODO we need to set an async function (self.update_cached_timelines) that periodically goes to every subscriber and asks for the latest timeline
-        #      in order to cache it. The first time could be in this function, but then it's just periodic.
-        #      ADVANTAGES: there would be a cache right after subscription, even if it missed the periodic "train"
-        #      DISADVANTAGES: its more complicated since we don't want the request to stall because of this (i think), so it would have to be asynchronous (i.e. without awaiting)
+        
         try:
             if not self.subscriptions.subscribe(username):
                 return ErrorResponse("Already subscribed.")
             self.subscriptions.store(self.storage)
             await self.kademlia_connection.subscribe(username, self.subscriptions.to_serializable())
+            asyncio.create_task(self.update_cached_timeline(username))
             return OkResponse()
         except Exception as e:
             self.subscriptions.subscriptions = subscriptions_backup
@@ -213,27 +223,26 @@ class Node:
 
         return OkResponse(response)            
 
-    async def update_cached_timelines(self, max_cached_posts):
-        for subscription in self.subscriptions.subscriptions:
-            subscribers = await self.kademlia_connection.get_subscribers(subscription)
-            if self.username not in subscribers:
-                pass # TODO We have detected that somehow we lost the subscription. We should probably try to re-subscribe.
-            
-            last_updated = None
-            if Timeline.exists(self.storage, subscription):
-                try:
-                    last_updated = Timeline.read(self.storage, subscription).last_updated
-                except Exception as e:
-                    log.debug("Could not read cached timeline for %s: %s", subscription, e)
-            response = await self.get_peers(subscription, max_cached_posts, subscribers=subscribers, last_updated_after=last_updated)
-            if response.status == "ok":
-                try:
-                    Timeline.from_serializable(response.data["timeline"]).store(self.storage)
-                    log.debug("Updated cached timeline for %s", subscription)
-                except Exception as e:
-                    log.debug("Could not update cached timeline for %s: %s", subscription, e)
-            else:
-                log.debug("Could not update cached timeline for %s: %s", subscription, response.error)
+    async def update_cached_timeline(self, username):
+        subscribers = await self.kademlia_connection.get_subscribers(username)
+        if self.username not in subscribers:
+            await self.kademlia_connection.subscribe(username, subscribers)
+        
+        last_updated = None
+        if Timeline.exists(self.storage, username):
+            try:
+                last_updated = Timeline.read(self.storage, username).last_updated
+            except Exception as e:
+                log.debug("Could not read cached timeline for %s: %s", username, e)
+        response = await self.get_peers(username, self.max_cached_posts, subscribers=subscribers, last_updated_after=last_updated)
+        if response.status == "ok":
+            try:
+                Timeline.from_serializable(response.data["timeline"]).store(self.storage)
+                log.debug("Updated cached timeline for %s", username)
+            except Exception as e:
+                log.debug("Could not update cached timeline for %s: %s", username, e)
+        else:
+            log.debug("Could not update cached timeline for %s: %s", username, response.error)
 
     async def run(self, port, bootstrap_nodes, local_port, cache_frequency, max_cached_posts):
         # TODO the teacher talked about synchronizing clocks between nodes, but I don't know why that would be necessary in this project.
@@ -242,6 +251,8 @@ class Node:
         asyncio.create_task(self.local_connection.start(local_port))
         asyncio.create_task(self.public_connection.start(self.username))
 
+        self.max_cached_posts = max_cached_posts
         while True:
-            await self.update_cached_timelines(max_cached_posts)
+            for subscription in self.subscriptions.subscriptions:
+                asyncio.create_task(self.update_cached_timeline(subscription, max_cached_posts))
             await asyncio.sleep(cache_frequency)
