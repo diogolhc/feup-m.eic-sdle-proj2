@@ -190,13 +190,13 @@ class Node:
         timelines = [self.timeline]
         warnings = []
 
-        for subscription in self.subscriptions.to_serializable():
-            response = self.handle_get(subscription, max_posts=None)
+        for subscription in self.subscriptions.subscriptions:
+            response = await self.handle_get(subscription, max_posts=None)
 
-            if response["status"] == "ok":
-                timelines.append(response["timeline"])
+            if response.status == "ok":
+                timelines.append(Timeline.from_serializable(response.data["timeline"]))
             else:
-                warnings.append(response["error"] + "-" + subscription)
+                warnings.append(response.data["error"] + "-" + subscription)
 
         return OkResponse({"timeline": MergedTimeline.from_timelines(timelines, max_posts).to_serializable(), "warnings": warnings})
 
