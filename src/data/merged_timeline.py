@@ -1,6 +1,7 @@
 """Classes to represent a Merged timeline of posts from several users."""
 from datetime import datetime
 from tabulate import tabulate
+from src.data.username import Username
 
 class MergedTimeline:
     def __init__(self, posts):
@@ -38,6 +39,10 @@ class MergedTimeline:
 
     @staticmethod
     def from_serializable(data):
+
+        for p in data["posts"]:
+            p["username"] = Username.from_str(p["username"])
+
         return MergedTimeline(**data)
 
     def to_serializable(self):
@@ -61,7 +66,7 @@ class MergedTimeline:
         def table_row(post):
             return [
                 post["id"],
-                post["username"],
+                str(post["username"]),
                 post["timestamp"].strftime("%Y-%m-%d %H:%M:%S"),
                 post["content"]
             ]
