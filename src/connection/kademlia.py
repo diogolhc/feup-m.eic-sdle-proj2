@@ -120,4 +120,4 @@ class KademliaConnection:
             log.debug("Bootstrapping with %s", bootstrap_nodes)
             await self.connection.bootstrap(bootstrap_nodes)
         
-        log.debug("Ready to listen to peers on port %s", port)
+        log.debug("Ready to listen to peers on kademlia port %s", port)

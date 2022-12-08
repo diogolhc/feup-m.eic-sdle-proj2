@@ -3,6 +3,7 @@ import ipaddress
 
 class PortValidator:
     """Validates and parses a port."""
+    @staticmethod
     def port(s):
         port = int(s)
         if port < 1 or port > 65535:
@@ -11,6 +12,7 @@ class PortValidator:
 
 
 class IpValidator:
+    @staticmethod
     def ip_address(s):
         """Validates and parses an ip address."""
         ipaddress.ip_address(s)
@@ -39,6 +41,7 @@ class IpPortValidator:
         return (ip, port)
 
 class PositiveIntegerValidator:
+    @staticmethod
     def positive_integer(s):
         """Validates and parses a positive integer."""
         i = int(s)

@@ -1,8 +1,8 @@
 """Classes to represent a timeline of posts from a user and a cached timeline."""
-from tabulate import tabulate
 from datetime import datetime, timedelta
-from src.data.username import Username
 import os
+from tabulate import tabulate
+from src.data.username import Username
 
 class Timeline:
     TIMELINES_FOLDER = "timelines"
@@ -25,6 +25,7 @@ class Timeline:
     def remove_post(self, post):
         self.posts.remove(post)
 
+    @staticmethod
     def from_serializable(data):
         if "valid_until" in data:
             return TimelineCache.from_serializable(data)
@@ -36,15 +37,18 @@ class Timeline:
         data["username"] = str(data["username"])
         return data
 
+    @staticmethod
     def get_file(storage, username):
         return os.path.join(Timeline.TIMELINES_FOLDER, f"{username.to_filename()}.json")
 
+    @staticmethod
     def exists(storage, username):
         return storage.exists(Timeline.get_file(storage, username))
 
     def store(self, storage):
         storage.write(self.to_serializable(), Timeline.get_file(storage, self.username))
 
+    @staticmethod
     def read(storage, username):
         if Timeline.exists(storage, username):
             return Timeline.from_serializable(
@@ -52,7 +56,8 @@ class Timeline:
             )
         else:
             return Timeline(username, [])
-    
+
+    @staticmethod
     def delete(storage, username):
         storage.delete(Timeline.get_file(storage, username))
 
@@ -112,6 +117,7 @@ class TimelineCache(Timeline):
             data["valid_until"] = data["valid_until"].isoformat()
         return data
 
+    @staticmethod
     def from_serializable(data):
         data["username"] = Username.from_str(data["username"])
         data["last_updated"] = datetime.fromisoformat(data["last_updated"])
