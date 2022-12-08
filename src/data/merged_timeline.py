@@ -13,7 +13,7 @@ class MergedTimeline:
             for post in posts:
                 post["username"] = timeline.username
 
-            self.posts.append(posts)
+            self.posts.extend(posts)
 
         posts = [{
             "id": p["id"],
