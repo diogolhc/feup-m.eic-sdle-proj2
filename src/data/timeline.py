@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta
 import os
 from tabulate import tabulate
-from src.data.userid import User
+from src.data.user import User
 
 
 class Timeline:

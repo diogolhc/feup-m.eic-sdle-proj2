@@ -1,7 +1,7 @@
 """A server that listens locally for commands from the user."""
 from src.connection.base import BaseConnection
 from src.connection.response import ErrorResponse
-from src.data.userid import User
+from src.data.user import User
 import logging
 
 log = logging.getLogger("timeline")

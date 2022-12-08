@@ -1,6 +1,6 @@
 """Represents a list of users this node is subscribed to."""
 
-from src.data.userid import User
+from src.data.user import User
 
 
 class Subscriptions:

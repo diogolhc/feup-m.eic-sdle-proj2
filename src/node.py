@@ -13,7 +13,7 @@ from src.connection import (
     OkResponse,
     ErrorResponse,
 )
-from src.data.userid import User
+from src.data.user import User
 
 log = logging.getLogger("timeline")
 

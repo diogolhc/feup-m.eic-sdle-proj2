@@ -1,7 +1,7 @@
 """Classes to represent a Merged timeline of posts from several users."""
 from datetime import datetime
 from tabulate import tabulate
-from src.data.userid import User
+from src.data.user import User
 
 
 class MergedTimeline:
