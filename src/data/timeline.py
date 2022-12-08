@@ -6,6 +6,7 @@ from src.data.username import Username
 
 class Timeline:
     TIMELINES_FOLDER = "timelines"
+    DEFAULT_CACHE_TIME_TO_LIVE = 60 # TODO good value?
 
     def __init__(self, username, posts):
         self.username = username
@@ -87,7 +88,7 @@ class Timeline:
             posts=self.posts if max_posts is None else self.posts[:max_posts],
             total_posts=len(self.posts),
             last_updated=now,
-            valid_until=now + timedelta(seconds=time_to_live),
+            valid_until=now + timedelta(seconds=time_to_live if time_to_live is not None else Timeline.DEFAULT_CACHE_TIME_TO_LIVE),
         )
 
 
