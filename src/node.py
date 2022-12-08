@@ -226,9 +226,9 @@ class Node:
 
             for sub in current_subscriptions:
                 #print("FRIEND OF SUB = " + str(sub))
-                #print("ME = " + str(self.username))
+                #print("ME = " + str(self.userid))
 
-                if sub is self.username:
+                if sub is self.userid:
                     #print("\nself\n")
                     continue
 
