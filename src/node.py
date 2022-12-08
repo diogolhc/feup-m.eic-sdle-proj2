@@ -96,18 +96,21 @@ class Node:
             if subscribers is None:
                 return ErrorResponse(f"No available source found.")
 
+        timeline = None
+
         for subscriber in subscribers:
             log.debug("Connecting to subscriber %s:%s", subscriber.ip, subscriber.port)
             response = await request(data, subscriber.ip, subscriber.port)
             if response["status"] == "ok":
-                timeline = Timeline.from_serializable(response["timeline"])
-                if timeline.last_updated <= last_updated_after:
+                timeline_t = Timeline.from_serializable(response["timeline"])
+                if timeline_t.last_updated <= last_updated_after:
                     continue  # The timeline is older than the current one
 
                 # TODO the teacher suggested that instead of just returning this one,
                 #      we could have some heuristic probability of trying others until
                 #      we are confident that we have an updated enough timeline.
-                return OkResponse({"timeline": response["timeline"]})
+                timeline = response["timeline"]
+                break
             else:
                 log.debug(
                     "Subscriber %s:%s responded with error: %s",
@@ -116,7 +119,11 @@ class Node:
                     response["error"],
                 )
 
-        return ErrorResponse(f"No available source found.")
+        if (not timeline) :
+            return ErrorResponse(f"No available source found.")
+        else :
+            return OkResponse({"timeline": timeline})
+        
 
     async def check_not_subscribed(self, userid):
         subscribers = await self.kademlia_connection.get_subscribers(userid)
