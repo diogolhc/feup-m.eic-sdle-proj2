@@ -34,7 +34,7 @@ def parse_arguments():
     start_parser.add_argument("-k", "--kademlia-port", help="Kademlia port number to serve at.", type=PortValidator.port, default=Node.DEFAULT_KADEMLIA_PORT)
     start_parser.add_argument("-b", "--bootstrap-nodes", help="IP addresses of existing nodes.", type=IpPortValidator(Node.DEFAULT_KADEMLIA_PORT).ip_address, nargs='+', default=[])
     start_parser.add_argument("-f", "--cache-frequency", help="The time in seconds it takes between caching periods.", type=PositiveIntegerValidator.positive_integer, default=Node.DEFAULT_SLEEP_TIME_BETWEEN_CACHING)
-    start_parser.add_argument("-c", "--max-cached-posts", help="The maximum number of posts to cache.", type=PositiveIntegerValidator.positive_integer, default=Node.DEFAULT_MAX_CACHED_POSTS)
+    start_parser.add_argument("-c", "--max-cached-posts", help="The maximum number of posts to cache per subscription.", type=PositiveIntegerValidator.positive_integer, default=Node.DEFAULT_MAX_CACHED_POSTS)
 
     post_parser.add_argument("filepath", help="Path to file to post.")
     get_parser.add_argument("userid", help="ID of user to get timeline of.", type=IpPortValidator(Node.DEFAULT_PUBLIC_PORT).ip_address)
