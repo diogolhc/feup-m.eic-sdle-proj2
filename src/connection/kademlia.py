@@ -57,20 +57,20 @@ class KademliaConnection:
         n = -1
         while (True):
             n += 1
-            log.debug(f"{n} - {response}") # TODO remove
+            log.debug(f"(un)sub iter: {n} ; key: {key} ; value: {response}")
             # Update the value
             if subscribed:
                 if subscription not in response:
                     response.append(subscription)
                     await self.put(key, response)
-                    log.debug(f"{n} - put {response}") # TODO remove
+                    log.debug(f"sub backoff iter: {n} ; key: {key} ; put: {response}")
                 else:
                     break
             else:
                 if subscription in response:
                     response.remove(subscription)
                     await self.put(key, response)
-                    log.debug(f"{n} - put {response}") # TODO remove
+                    log.debug(f"unsub backoff iter: {n} ; key: {key} ; put: {response}")
                 else:
                     break
 
@@ -83,9 +83,8 @@ class KademliaConnection:
 
             # Check if the value has changed in the meantime
             updated_response = await self.get(key)
-            log.debug(f"{n} - updated: {updated_response}") # TODO remove
+            log.debug(f"(un)sub iter: {n} ; UPDATED ; key: {key} ; value: {updated_response}")
             if updated_response is None:
-                log.debug("updated response is none") # TODO remove
                 updated_response = []
 
             if subscribed:
