@@ -82,10 +82,25 @@ class Timeline:
         return tabulate(tabledata, headers=["id", "time", "content"])
 
     def cache(self, max_posts, time_to_live=None):
+
+        posts = [{
+            "id": p["id"],
+            "timestamp": datetime.fromisoformat(p["timestamp"]),
+            "content": p["content"]
+        } for p in self.posts]
+
+        posts.sort(key=lambda x: x["timestamp"], reverse=True)
+
+        all_posts = [{
+            "id": p["id"],
+            "timestamp": p["timestamp"].isoformat(),
+            "content": p["content"]
+        } for p in posts]
+
         now = datetime.now()
         return TimelineCache(
             username=self.username,
-            posts=self.posts if max_posts is None else self.posts[:max_posts],
+            posts=all_posts if max_posts is None else all_posts[:max_posts],
             total_posts=len(self.posts),
             last_updated=now,
             valid_until=now + timedelta(seconds=time_to_live if time_to_live is not None else Timeline.DEFAULT_CACHE_TIME_TO_LIVE),
@@ -103,9 +118,23 @@ class TimelineCache(Timeline):
         return self.valid_until is None or datetime.now() < self.valid_until
 
     def cache(self, max_posts):
+        posts = [{
+            "id": p["id"],
+            "timestamp": datetime.fromisoformat(p["timestamp"]),
+            "content": p["content"]
+        } for p in self.posts]
+
+        posts.sort(key=lambda x: x["timestamp"], reverse=True)
+
+        all_posts = [{
+            "id": p["id"],
+            "timestamp": p["timestamp"].isoformat(),
+            "content": p["content"]
+        } for p in posts]
+
         return TimelineCache(
             username=self.username,
-            posts=self.posts if max_posts is None else self.posts[:max_posts],
+            posts=all_posts if max_posts is None else all_posts[:max_posts],
             total_posts=self.total_posts,
             last_updated=self.last_updated,
             valid_until=self.valid_until,
