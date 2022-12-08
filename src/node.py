@@ -198,7 +198,7 @@ class Node:
             else:
                 warnings.append(response["error"] + "-" + subscription)
 
-        return OkResponse({"timeline": MergedTimeline(timelines, max_posts), "warnings": warnings})
+        return OkResponse({"timeline": MergedTimeline.from_timelines(timelines, max_posts).to_serializable(), "warnings": warnings})
 
     async def handle_people_i_may_know(self, max_users):
         suggestions = set()

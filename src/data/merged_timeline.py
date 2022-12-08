@@ -3,35 +3,38 @@ from datetime import datetime
 from tabulate import tabulate
 
 class MergedTimeline:
-    def __init__(self, timelines, max_posts):
-        self.timelines = timelines
-        self.posts = []
+    def __init__(self, posts):
+        self.posts = posts
 
-        for timeline in self.timelines:
+    @staticmethod
+    def from_timelines(timelines, max_posts):
+        all_posts = []
+
+        for timeline in timelines:
             posts = timeline.posts
 
             for post in posts:
                 post["username"] = timeline.username
 
-            self.posts.extend(posts)
+            all_posts.extend(posts)
 
         posts = [{
             "id": p["id"],
             "username": p["username"],
             "timestamp": datetime.fromisoformat(p["timestamp"]),
             "content": p["content"]
-        } for p in self.posts]
+        } for p in all_posts]
 
         posts.sort(key=lambda x: x["timestamp"], reverse=True)
 
-        self.posts = [{
+        all_posts = [{
             "id": p["id"],
             "username": p["username"],
             "timestamp": p["timestamp"].isoformat(),
             "content": p["content"]
         } for p in posts]
-    
-        self.posts = self.posts if max_posts is None else self.posts[:max_posts]
+
+        return MergedTimeline(all_posts if max_posts is None else all_posts[:max_posts])
 
     @staticmethod
     def from_serializable(data):

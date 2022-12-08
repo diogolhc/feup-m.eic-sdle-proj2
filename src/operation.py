@@ -10,7 +10,7 @@ log = logging.getLogger("timeline")
 
 async def execute(data, local_port):
     log.debug("Connecting to local server on port %s", local_port)
-    response = await request(data, "127.0.0.1", local_port)
+    response = await request(data, "127.0.0.1", local_port) # TODO should we be using 127.0.0.1 hardcoded here instead of ip from the userid?
 
     if response["status"] != "ok":
         print(f"Error: {response['error']}")
