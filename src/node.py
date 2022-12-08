@@ -168,7 +168,7 @@ class Node:
         timelines = [self.timeline]
         warnings = []
 
-        for subscription in self.subscriptions.to_serializable:
+        for subscription in self.subscriptions.to_serializable():
             response = self.handle_get(subscription, max_posts=None)
 
             if response["status"] == "ok":
@@ -179,7 +179,27 @@ class Node:
         return OkResponse({"timeline": MergedTimeline(timelines, max_posts), "warnings": warnings})
 
     async def handle_people_i_may_know(self, max_users):
-        return ErrorResponse("Not implemented.")  # TODO
+        suggestions = set()
+        common = {}
+
+        for subscription in self.subscriptions.to_serializable():
+            subscriptions = await self.kademlia_connection.get_subscribed(subscription)
+
+            suggestions.update(subscriptions)
+
+            for sub in subscriptions:
+                if sub in common.keys():
+                    common[sub].add(subscription)
+                else:
+                    common[sub] = {subscription}
+
+        response = [{"username": s, "common": common[s]} for s in suggestions]
+
+        response.sort(key=lambda x: len(x["common"]), reverse=True)
+
+        response = response if max_users is None else response[:max_users]
+
+        return OkResponse(response)            
 
     async def update_cached_timelines(self, max_cached_posts):
         # TODO this is where we should go to everyone we subscribed and ask for the latest timeline
