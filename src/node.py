@@ -218,23 +218,48 @@ class Node:
         common = {}
 
         for subscription in self.subscriptions.to_serializable():
-            subscriptions = await self.kademlia_connection.get_subscribed(subscription)
+            #print("SUB = " + str(subscription))
+            #print("\nIN FOR\n")
+            current_subscriptions = await self.kademlia_connection.get_subscribed(subscription)
 
-            suggestions.update(subscriptions)
+            #print("\nSIZE OF SUBSCRIPTIONS: " + str(len(current_subscriptions)) + "\n")
 
-            for sub in subscriptions:
+            for sub in current_subscriptions:
+                #print("FRIEND OF SUB = " + str(sub))
+                #print("ME = " + str(self.userid))
+
+                if sub is self.userid:
+                    #print("\nself\n")
+                    continue
+
+                sub = str(sub)
+
+                if sub in self.subscriptions.to_serializable():
+                    #print("ALREADY IN SUBS")
+                    continue
+
+                suggestions.add(sub)
+
                 if sub in common.keys():
                     common[sub].add(subscription)
                 else:
                     common[sub] = {subscription}
 
-        response = [{"userid": s, "common": common[s]} for s in suggestions]
+        response = []
+        response = [{"userid": s, "common": list(common[s])} for s in suggestions]
 
         response.sort(key=lambda x: len(x["common"]), reverse=True)
 
-        response = response if max_users is None else response[:max_users]
+        #print("\n\nRESPONSE = ")
+        #print(response)
+        #print("\n\n")
 
-        return OkResponse(response)
+        r = {"users": response if max_users is None else response[:max_users]}
+
+        #print("\n\nREAL RESPONSE = ")
+        #print(r)
+
+        return OkResponse(r)            
 
     async def update_cached_timeline(self, userid):
         subscribers = await self.kademlia_connection.get_subscribers(userid)

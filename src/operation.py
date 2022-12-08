@@ -67,4 +67,4 @@ async def people_i_may_know(local_port, max_users=None):
     )
 
     if response["status"] == "ok":
-        print(response["users"].pretty_str())
+        print(response["users"])
