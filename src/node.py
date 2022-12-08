@@ -242,7 +242,7 @@ class Node:
             except Exception as e:
                 log.debug("Could not update cached timeline for %s: %s", username, e)
         else:
-            log.debug("Could not update cached timeline for %s: %s", username, response.error)
+            log.debug("Could not update cached timeline for %s: %s", username, response.data["error"])
 
     async def run(self, port, bootstrap_nodes, local_port, cache_frequency, max_cached_posts):
         # TODO the teacher talked about synchronizing clocks between nodes, but I don't know why that would be necessary in this project.
