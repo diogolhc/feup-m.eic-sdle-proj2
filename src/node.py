@@ -137,7 +137,7 @@ class Node:
     async def check_not_subscribed(self, userid):
         subscribers = await self.kademlia_connection.get_subscribers(userid)
         if self.userid in subscribers:
-            await self.kademlia_connection.unsubscribe(userid, subscribers)
+            await self.kademlia_connection.unsubscribe(userid, [str(s) for s in subscribers])
 
     async def handle_public_get(self, userid, max_posts):
         if userid != self.userid and userid not in self.subscriptions.subscriptions:
@@ -280,7 +280,7 @@ class Node:
     async def update_cached_timeline(self, userid):
         subscribers = await self.kademlia_connection.get_subscribers(userid)
         if self.userid not in subscribers:
-            await self.kademlia_connection.subscribe(userid, subscribers)
+            await self.kademlia_connection.subscribe(userid, [str(s) for s in subscribers])
 
         last_updated = None
         if Timeline.exists(self.storage, userid):
