@@ -2,7 +2,7 @@
 import asyncio
 import logging
 from src.data.timeline import Timeline
-from data.merged_timeline import MergedTimeline
+from src.data.merged_timeline import MergedTimeline
 from src.data.subscriptions import Subscriptions
 from src.data.storage import PersistentStorage
 from src.connection import (
@@ -177,19 +177,41 @@ class Node:
             return ErrorResponse("Could not unsubscribe.")
 
     async def handle_view(self, max_posts):
-        timelines = []
+        timelines = [self.timeline]
+        warnings = []
 
-        for subscriber in self.subscribers:
-            response = self.handle_get(subscriber, max_posts=10)   # TODO max_posts ??
+        for subscription in self.subscriptions.to_serializable():
+            response = self.handle_get(subscription, max_posts=None)
 
             if response["status"] == "ok":
                 timelines.append(response["timeline"])
-            # TODO what if error?
+            else:
+                warnings.append(response["error"] + "-" + subscription)
 
-        return OkResponse({"timeline": MergedTimeline(timelines)})
+        return OkResponse({"timeline": MergedTimeline(timelines, max_posts), "warnings": warnings})
 
     async def handle_people_i_may_know(self, max_users):
-        return ErrorResponse("Not implemented.")  # TODO
+        suggestions = set()
+        common = {}
+
+        for subscription in self.subscriptions.to_serializable():
+            subscriptions = await self.kademlia_connection.get_subscribed(subscription)
+
+            suggestions.update(subscriptions)
+
+            for sub in subscriptions:
+                if sub in common.keys():
+                    common[sub].add(subscription)
+                else:
+                    common[sub] = {subscription}
+
+        response = [{"username": s, "common": common[s]} for s in suggestions]
+
+        response.sort(key=lambda x: len(x["common"]), reverse=True)
+
+        response = response if max_users is None else response[:max_users]
+
+        return OkResponse(response)            
 
     async def update_cached_timelines(self, max_cached_posts):
         for subscription in self.subscriptions.subscriptions:
