@@ -59,4 +59,4 @@ async def people_i_may_know(local_port, max_users=None):
     response = await execute({"command": "people-i-may-know", "max-users": max_users}, local_port)
 
     if response["status"] == "ok":
-        print(response["users"].pretty_str())
+        print(response["users"])

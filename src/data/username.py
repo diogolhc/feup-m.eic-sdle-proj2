@@ -6,6 +6,9 @@ class Username:
         self.ip = username[0]
         self.port = username[1]
     
+    def __hash__(self):
+        return hash(str(self.ip) + str(self.port))
+
     @staticmethod
     def from_str(s):
         return Username(IpPortValidator().ip_address(s))
@@ -21,4 +24,4 @@ class Username:
         return f"{self.ip}:{self.port}"
     
     def __eq__(self, other):
-        return self.ip == other.ip and self.port == other.port
+        return isinstance(other, Username) and self.ip == other.ip and self.port == other.port
