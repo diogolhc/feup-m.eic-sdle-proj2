@@ -168,17 +168,13 @@ class Node:
         timelines = [self.timeline]
         warnings = []
 
-        subscribers = await self.kademlia_connection.get_subscribers(self.username)
-        if subscribers is None:
-            return ErrorResponse(f"No available source found.")
-
-        for subscriber in self.subscribers:
-            response = self.handle_get(subscriber, max_posts=None)
+        for subscription in self.subscriptions.to_serializable:
+            response = self.handle_get(subscription, max_posts=None)
 
             if response["status"] == "ok":
                 timelines.append(response["timeline"])
             else:
-                warnings.append(response["error"] + "-" + subscriber)
+                warnings.append(response["error"] + "-" + subscription)
 
         return OkResponse({"timeline": MergedTimeline(timelines, max_posts), "warnings": warnings})
 
