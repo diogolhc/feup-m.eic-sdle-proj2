@@ -1,6 +1,7 @@
 """Class for the node that runs the timeline service."""
 import asyncio
 import logging
+import random as rnd
 from src.data.timeline import Timeline
 from src.data.merged_timeline import MergedTimeline
 from src.data.subscriptions import Subscriptions
@@ -97,20 +98,29 @@ class Node:
                 return ErrorResponse(f"No available source found.")
 
         timeline = None
+        last_update_check = last_updated_after
+        HEURISTIC_PROBABILITY = 30
 
         for subscriber in subscribers:
             log.debug("Connecting to subscriber %s:%s", subscriber.ip, subscriber.port)
             response = await request(data, subscriber.ip, subscriber.port)
             if response["status"] == "ok":
                 timeline_t = Timeline.from_serializable(response["timeline"])
-                if timeline_t.last_updated <= last_updated_after:
-                    continue  # The timeline is older than the current one
 
-                # TODO the teacher suggested that instead of just returning this one,
-                #      we could have some heuristic probability of trying others until
-                #      we are confident that we have an updated enough timeline.
+                if timeline_t.last_updated == last_update_check and rnd.randint(0, 100) < HEURISTIC_PROBABILITY and timeline:
+                    break
+
+                if timeline_t.last_updated < last_update_check: # The timeline is older than the current one
+                    if timeline:
+                        break
+                    else:
+                        continue
+                
+                log.debug("Checking subscriber")
+
                 timeline = response["timeline"]
-                break
+                last_update_check = timeline_t.last_updated
+
             else:
                 log.debug(
                     "Subscriber %s:%s responded with error: %s",
