@@ -77,7 +77,7 @@ def main():
     elif args.command == "view":
         run = view(local_port=args.local_port, max_posts=args.max_posts)
     elif args.command == "people-i-may-know":
-        run = people_i_may_know(None, local_port=args.local_port, max_users=args.max_users)
+        run = people_i_may_know(local_port=args.local_port, max_users=args.max_users)
     
     asyncio.run(run, debug=args.debug)
 
