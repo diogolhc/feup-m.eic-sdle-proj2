@@ -1,28 +1,29 @@
 """Represents a list of users this node is subscribed to."""
 
-from src.data.username import Username
+from src.data.userid import User
+
 
 class Subscriptions:
     SUBSCRIPTIONS_FILE = "subscriptions.json"
 
     def __init__(self, subscriptions):
         self.subscriptions = subscriptions
-    
-    def subscribe(self, username):
-        if username not in self.subscriptions:
-            self.subscriptions.append(username)
+
+    def subscribe(self, userid):
+        if userid not in self.subscriptions:
+            self.subscriptions.append(userid)
             return True
         return False
-    
-    def unsubscribe(self, username):
-        if username in self.subscriptions:
-            self.subscriptions.remove(username)
+
+    def unsubscribe(self, userid):
+        if userid in self.subscriptions:
+            self.subscriptions.remove(userid)
             return True
         return False
-    
+
     @staticmethod
     def from_serializable(data):
-        return Subscriptions([Username.from_str(sub) for sub in data])
+        return Subscriptions([User.from_str(sub) for sub in data])
 
     def to_serializable(self):
         return [str(sub) for sub in self.subscriptions]

@@ -13,7 +13,7 @@ from src.connection import (
     OkResponse,
     ErrorResponse,
 )
-from src.data.username import Username
+from src.data.userid import User
 
 log = logging.getLogger("timeline")
 
@@ -25,22 +25,27 @@ class Node:
     DEFAULT_KADEMLIA_PORT = 8468
     DEFAULT_LOCAL_PORT = 8600
 
-    def __init__(self, username):
-        self.username = Username(username)
+    def __init__(self, userid):
+        self.userid = User(userid)
 
         # Connections
-        self.kademlia_connection = KademliaConnection(self.username)
+        self.kademlia_connection = KademliaConnection(self.userid)
         self.local_connection = LocalConnection(
-            self.handle_get, self.handle_post, self.handle_sub, self.handle_unsub, self.handle_view, self.handle_people_i_may_know
+            self.handle_get,
+            self.handle_post,
+            self.handle_sub,
+            self.handle_unsub,
+            self.handle_view,
+            self.handle_people_i_may_know,
         )
         self.public_connection = PublicConnection(self.handle_public_get)
 
         # Storage
-        self.storage = PersistentStorage(self.username)
+        self.storage = PersistentStorage(self.userid)
         self.storage.create_dir(Timeline.TIMELINES_FOLDER)
 
         try:
-            self.timeline = Timeline.read(self.storage, self.username)
+            self.timeline = Timeline.read(self.storage, self.userid)
         except Exception as e:
             print("Could not read timeline from storage.", e)
             exit(1)
@@ -50,42 +55,44 @@ class Node:
         except Exception as e:
             print("Could not read subscriptions from storage.", e)
             exit(1)
-    
-    async def get_local(self, username, max_posts):
+
+    async def get_local(self, userid, max_posts):
         # 1st try: get own timeline
-        if username == self.username:
+        if userid == self.userid:
             return self.timeline.cache(max_posts)
 
         # 2nd try: get cached timeline
         # TODO we might want this to be done only after step 3 (if the caller was handle_get())? i don't know
-        if Timeline.exists(self.storage, username):
+        if Timeline.exists(self.storage, userid):
             try:
-                timeline = Timeline.read(self.storage, username)
+                timeline = Timeline.read(self.storage, userid)
                 if timeline.is_valid():
                     return timeline.cache(max_posts)
-                    
+
             except Exception as e:
                 print("Could not read timeline from storage.", e)
-        
+
         return None
-    
-    async def get_peers(self, username, max_posts, subscribers=None, last_updated_after=None):
+
+    async def get_peers(
+        self, userid, max_posts, subscribers=None, last_updated_after=None
+    ):
         # 3rd try: get timeline directly from owner
         data = {
             "command": "get-timeline",
-            "username": str(username),
+            "userid": str(userid),
             "max-posts": max_posts,
         }
 
-        log.debug("Connecting to %s", username)
-        response = await request(data, username.ip, username.port)
+        log.debug("Connecting to %s", userid)
+        response = await request(data, userid.ip, userid.port)
 
         if response["status"] == "ok":
             return OkResponse({"timeline": response["timeline"]})
 
         # 4th try: get timeline from a subscriber
         if subscribers is None:
-            subscribers = await self.kademlia_connection.get_subscribers(username)
+            subscribers = await self.kademlia_connection.get_subscribers(userid)
             if subscribers is None:
                 return ErrorResponse(f"No available source found.")
 
@@ -95,7 +102,7 @@ class Node:
             if response["status"] == "ok":
                 timeline = Timeline.from_serializable(response["timeline"])
                 if timeline.last_updated <= last_updated_after:
-                    continue # The timeline is older than the current one
+                    continue  # The timeline is older than the current one
 
                 # TODO the teacher suggested that instead of just returning this one,
                 #      we could have some heuristic probability of trying others until
@@ -110,33 +117,29 @@ class Node:
                 )
 
         return ErrorResponse(f"No available source found.")
-    
-    async def check_not_subscribed(self, username):
-        subscribers = await self.kademlia_connection.get_subscribers(username)
-        if self.username in subscribers:
-            await self.kademlia_connection.unsubscribe(username, subscribers)
-        
-    async def handle_public_get(self, username, max_posts):
-        if username != self.username and username not in self.subscriptions.subscriptions:
+
+    async def check_not_subscribed(self, userid):
+        subscribers = await self.kademlia_connection.get_subscribers(userid)
+        if self.userid in subscribers:
+            await self.kademlia_connection.unsubscribe(userid, subscribers)
+
+    async def handle_public_get(self, userid, max_posts):
+        if userid != self.userid and userid not in self.subscriptions.subscriptions:
             # This node is not subscribed, so it is strange to receive a request
             # Because of this, it will check the subscription value in the DHT
-            asyncio.create_task(self.check_not_subscribed(username))
-            return ErrorResponse(f"Not locally available.")            
-        
-        timeline = await self.get_local(username, max_posts)
+            asyncio.create_task(self.check_not_subscribed(userid))
+            return ErrorResponse(f"Not locally available.")
+
+        timeline = await self.get_local(userid, max_posts)
         if timeline is None:
             return ErrorResponse(f"Not locally available.")
-        return OkResponse(
-            {"timeline": timeline.to_serializable()}
-        )
+        return OkResponse({"timeline": timeline.to_serializable()})
 
-    async def handle_get(self, username, max_posts):
-        timeline = await self.get_local(username, max_posts)
+    async def handle_get(self, userid, max_posts):
+        timeline = await self.get_local(userid, max_posts)
         if timeline is not None:
-            return OkResponse(
-                {"timeline": timeline.to_serializable()}
-            )
-        return await self.get_peers(username, max_posts)
+            return OkResponse({"timeline": timeline.to_serializable()})
+        return await self.get_peers(userid, max_posts)
 
     async def handle_post(self, filepath):
         post = None
@@ -151,35 +154,39 @@ class Node:
             print("Could not post message.", e)
             return ErrorResponse("Could not post message.")
 
-    async def handle_sub(self, username):
-        if username == self.username:
+    async def handle_sub(self, userid):
+        if userid == self.userid:
             return ErrorResponse("Cannot subscribe to self.")
-        
+
         subscriptions_backup = self.subscriptions.subscriptions.copy()
-        
+
         try:
-            if not self.subscriptions.subscribe(username):
+            if not self.subscriptions.subscribe(userid):
                 return ErrorResponse("Already subscribed.")
             self.subscriptions.store(self.storage)
-            await self.kademlia_connection.subscribe(username, self.subscriptions.to_serializable())
-            asyncio.create_task(self.update_cached_timeline(username))
+            await self.kademlia_connection.subscribe(
+                userid, self.subscriptions.to_serializable()
+            )
+            asyncio.create_task(self.update_cached_timeline(userid))
             return OkResponse()
         except Exception as e:
             self.subscriptions.subscriptions = subscriptions_backup
             print("Could not subscribe.", e)
             return ErrorResponse("Could not subscribe.")
 
-    async def handle_unsub(self, username):
-        if username == self.username:
+    async def handle_unsub(self, userid):
+        if userid == self.userid:
             return ErrorResponse("Cannot unsubscribe from self.")
-        
+
         subscriptions_backup = self.subscriptions.subscriptions.copy()
         try:
-            if not self.subscriptions.unsubscribe(username):
+            if not self.subscriptions.unsubscribe(userid):
                 return ErrorResponse("Not subscribed.")
-            Timeline.delete(self.storage, username)
+            Timeline.delete(self.storage, userid)
             self.subscriptions.store(self.storage)
-            await self.kademlia_connection.unsubscribe(username, self.subscriptions.to_serializable())
+            await self.kademlia_connection.unsubscribe(
+                userid, self.subscriptions.to_serializable()
+            )
             return OkResponse()
         except Exception as e:
             self.subscriptions.subscriptions = subscriptions_backup
@@ -198,7 +205,14 @@ class Node:
             else:
                 warnings.append(response["error"] + "-" + subscription)
 
-        return OkResponse({"timeline": MergedTimeline.from_timelines(timelines, max_posts).to_serializable(), "warnings": warnings})
+        return OkResponse(
+            {
+                "timeline": MergedTimeline.from_timelines(
+                    timelines, max_posts
+                ).to_serializable(),
+                "warnings": warnings,
+            }
+        )
 
     async def handle_people_i_may_know(self, max_users):
         suggestions = set()
@@ -215,41 +229,54 @@ class Node:
                 else:
                     common[sub] = {subscription}
 
-        response = [{"username": s, "common": common[s]} for s in suggestions]
+        response = [{"userid": s, "common": common[s]} for s in suggestions]
 
         response.sort(key=lambda x: len(x["common"]), reverse=True)
 
         response = response if max_users is None else response[:max_users]
 
-        return OkResponse(response)            
+        return OkResponse(response)
 
-    async def update_cached_timeline(self, username):
-        subscribers = await self.kademlia_connection.get_subscribers(username)
-        if self.username not in subscribers:
-            await self.kademlia_connection.subscribe(username, subscribers)
-        
+    async def update_cached_timeline(self, userid):
+        subscribers = await self.kademlia_connection.get_subscribers(userid)
+        if self.userid not in subscribers:
+            await self.kademlia_connection.subscribe(userid, subscribers)
+
         last_updated = None
-        if Timeline.exists(self.storage, username):
+        if Timeline.exists(self.storage, userid):
             try:
-                last_updated = Timeline.read(self.storage, username).last_updated
+                last_updated = Timeline.read(self.storage, userid).last_updated
             except Exception as e:
-                log.debug("Could not read cached timeline for %s: %s", username, e)
-        response = await self.get_peers(username, self.max_cached_posts, subscribers=subscribers, last_updated_after=last_updated)
+                log.debug("Could not read cached timeline for %s: %s", userid, e)
+        response = await self.get_peers(
+            userid,
+            self.max_cached_posts,
+            subscribers=subscribers,
+            last_updated_after=last_updated,
+        )
         if response.status == "ok":
             try:
-                Timeline.from_serializable(response.data["timeline"]).store(self.storage)
-                log.debug("Updated cached timeline for %s", username)
+                Timeline.from_serializable(response.data["timeline"]).store(
+                    self.storage
+                )
+                log.debug("Updated cached timeline for %s", userid)
             except Exception as e:
-                log.debug("Could not update cached timeline for %s: %s", username, e)
+                log.debug("Could not update cached timeline for %s: %s", userid, e)
         else:
-            log.debug("Could not update cached timeline for %s: %s", username, response.data["error"])
+            log.debug(
+                "Could not update cached timeline for %s: %s",
+                userid,
+                response.data["error"],
+            )
 
-    async def run(self, port, bootstrap_nodes, local_port, cache_frequency, max_cached_posts):
+    async def run(
+        self, port, bootstrap_nodes, local_port, cache_frequency, max_cached_posts
+    ):
         # TODO the teacher talked about synchronizing clocks between nodes, but I don't know why that would be necessary in this project.
         #      anyway, if we decide to do that, it should be done only after everything else is done, probably.
         await self.kademlia_connection.start(port, bootstrap_nodes)
         asyncio.create_task(self.local_connection.start(local_port))
-        asyncio.create_task(self.public_connection.start(self.username))
+        asyncio.create_task(self.public_connection.start(self.userid))
 
         self.max_cached_posts = max_cached_posts
         while True:
