@@ -38,11 +38,11 @@ def parse_arguments():
 
     post_parser.add_argument("filepath", help="Path to file to post.")
     get_parser.add_argument("userid", help="ID of user to get timeline of.", type=IpPortValidator(Node.DEFAULT_PUBLIC_PORT).ip_address)
-    get_parser.add_argument("max-posts", help="Limit the number of posts to get.", type=PositiveIntegerValidator.positive_integer, default=None, nargs="?")
+    get_parser.add_argument("max_posts", help="Limit the number of posts to get.", type=PositiveIntegerValidator.positive_integer, default=None, nargs="?")
     sub_parser.add_argument("userid", help="ID of user to subscribe to.", type=IpPortValidator(Node.DEFAULT_PUBLIC_PORT).ip_address)
     unsub_parser.add_argument("userid", help="ID of user to unsubscribe from.", type=IpPortValidator(Node.DEFAULT_PUBLIC_PORT).ip_address)
-    view_parser.add_argument("max-posts", help="Limit the number of posts to get.", type=PositiveIntegerValidator.positive_integer, default=None, nargs="?")
-    may_know_parser.add_argument("max-users", help="Limit the number of users to get.", type=PositiveIntegerValidator.positive_integer, default=None, nargs="?")
+    view_parser.add_argument("max_posts", help="Limit the number of posts to get.", type=PositiveIntegerValidator.positive_integer, default=None, nargs="?")
+    may_know_parser.add_argument("max_users", help="Limit the number of users to get.", type=PositiveIntegerValidator.positive_integer, default=None, nargs="?")
 
     for subparser in all_parsers:
         # Adding command here so it appears at the end of the help
