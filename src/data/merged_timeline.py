@@ -42,6 +42,10 @@ class MergedTimeline:
 
     def to_serializable(self):
         data = self.__dict__.copy()
+
+        for p in data["posts"]:
+            p["username"] = str(p["username"])
+
         return data
 
     def pretty_str(self):
