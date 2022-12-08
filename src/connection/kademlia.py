@@ -21,14 +21,14 @@ class KademliaConnection:
     
     async def subscribe(self, username, subscriptions):
         # This node owns this key. It can just set the value without worries.
-        await self.put(f"{username}-subscribed", subscriptions)
+        await self.put(f"{username}-subscribed", [s.__str__() for s in subscriptions])
 
         # This key is shared, so the logic is more complicated
         await self.set_subscription(f"{username}-subscribers", self.username, True)
     
     async def unsubscribe(self, username, subscriptions):
         # This node owns this key. It can just set the value without worries.
-        await self.put(f"{username}-subscribed", subscriptions)
+        await self.put(f"{username}-subscribed", [s.__str__() for s in subscriptions])
 
         # This key is shared, so the logic is more complicated
         await self.set_subscription(f"{username}-subscribers", self.username, False)
@@ -39,7 +39,7 @@ class KademliaConnection:
             return []
         
         return [Username(IpPortValidator().ip_address(s)) for s in response]
-    
+
     async def get_subscribed(self, username):
         response = await self.get(f"{username}-subscribed")
         if response is None:
