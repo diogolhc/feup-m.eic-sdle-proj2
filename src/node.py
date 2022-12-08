@@ -50,13 +50,11 @@ class Node:
         except Exception as e:
             print("Could not read subscriptions from storage.", e)
             exit(1)
-
-    async def handle_public_get(self, username, max_posts):
+    
+    async def get_local(self, username, max_posts):
         # 1st try: get own timeline
         if username == self.username:
-            return OkResponse(
-                {"timeline": self.timeline.cache(max_posts).to_serializable()}
-            )
+            return self.timeline.cache(max_posts)
 
         # 2nd try: get cached timeline
         # TODO we might want this to be done only after step 3 (if the caller was handle_get())? i don't know
@@ -64,20 +62,14 @@ class Node:
             try:
                 timeline = Timeline.read(self.storage, username)
                 if timeline.is_valid():
-                    return OkResponse(
-                        {"timeline": timeline.cache(max_posts).to_serializable()}
-                    )
+                    return timeline.cache(max_posts)
+                    
             except Exception as e:
                 print("Could not read timeline from storage.", e)
-
-        return ErrorResponse(f"Not locally available.")
-
-    async def handle_get(self, username, max_posts):
-        # 1st and 2nd try: locally available
-        response = await self.handle_public_get(username, max_posts)
-        if response.status == "ok":
-            return response
-
+        
+        return None
+    
+    async def get_peers(self, username, max_posts, subscribers=None, last_updated_after=None):
         # 3rd try: get timeline directly from owner
         data = {
             "command": "get-timeline",
@@ -92,14 +84,18 @@ class Node:
             return OkResponse({"timeline": response["timeline"]})
 
         # 4th try: get timeline from a subscriber
-        subscribers = await self.kademlia_connection.get_subscribers(username)
         if subscribers is None:
-            return ErrorResponse(f"No available source found.")
+            subscribers = await self.kademlia_connection.get_subscribers(username)
+            if subscribers is None:
+                return ErrorResponse(f"No available source found.")
 
         for subscriber in subscribers:
             log.debug("Connecting to subscriber %s:%s", subscriber[0], subscriber[1])
             response = await request(data, subscriber[0], subscriber[1])
             if response["status"] == "ok":
+                timeline = Timeline.from_serializable(response["timeline"])
+                if timeline.last_updated <= last_updated_after:
+                    continue # The timeline is older than the current one
                 # TODO the teacher suggested that instead of just returning this one,
                 #      we could have some heuristic probability of trying others until
                 #      we are confident that we have an updated enough timeline.
@@ -113,6 +109,22 @@ class Node:
                 )
 
         return ErrorResponse(f"No available source found.")
+        
+    async def handle_public_get(self, username, max_posts):
+        timeline = await self.get_local(username, max_posts)
+        if timeline is None:
+            return ErrorResponse(f"Not locally available.")
+        return OkResponse(
+            {"timeline": timeline.to_serializable()}
+        )
+
+    async def handle_get(self, username, max_posts):
+        timeline = await self.get_local(username, max_posts)
+        if timeline is not None:
+            return OkResponse(
+                {"timeline": timeline.to_serializable()}
+            )
+        return await self.get_peers(username, max_posts)
 
     async def handle_post(self, filepath):
         post = None
@@ -180,8 +192,26 @@ class Node:
         return ErrorResponse("Not implemented.")  # TODO
 
     async def update_cached_timelines(self, max_cached_posts):
-        # TODO this is where we should go to everyone we subscribed and ask for the latest timeline
-        pass
+        for subscription in self.subscriptions.subscriptions:
+            subscribers = await self.kademlia_connection.get_subscribers(subscription)
+            if self.username not in subscribers:
+                pass # TODO We have detected that somehow we lost the subscription. We should probably try to re-subscribe.
+            
+            last_updated = None
+            if Timeline.exists(self.storage, subscription):
+                try:
+                    last_updated = Timeline.read(self.storage, subscription).last_updated
+                except Exception as e:
+                    log.debug("Could not read cached timeline for %s: %s", subscription, e)
+            response = await self.get_peers(subscription, max_cached_posts, subscribers=subscribers, last_updated_after=last_updated)
+            if response.status == "ok":
+                try:
+                    Timeline.from_serializable(response.data["timeline"]).store(self.storage)
+                    log.debug("Updated cached timeline for %s", subscription)
+                except Exception as e:
+                    log.debug("Could not update cached timeline for %s: %s", subscription, e)
+            else:
+                log.debug("Could not update cached timeline for %s: %s", subscription, response.error)
 
     async def run(self, port, bootstrap_nodes, local_port, cache_frequency, max_cached_posts):
         # TODO the teacher talked about synchronizing clocks between nodes, but I don't know why that would be necessary in this project.
