@@ -121,7 +121,7 @@ class Timeline:
             + timedelta(
                 seconds=time_to_live
                 if time_to_live is not None
-                else Timeline.DEFAULT_CACHE_TIME_TO_LIVE
+                else Timeline.DEFAULT_CACHE_TIME_TO_LIVE # TODO time_to_live == None means infinite
             ),
         )
 
