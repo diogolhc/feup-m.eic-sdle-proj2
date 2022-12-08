@@ -6,9 +6,11 @@ class Username:
         self.ip = username[0]
         self.port = username[1]
     
+    @staticmethod
     def from_str(s):
         return Username(IpPortValidator().ip_address(s))
     
+    @staticmethod
     def from_filename(s):
         return Username(IpPortValidator().ip_address(s.replace('-', ':')))
 

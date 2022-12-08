@@ -1,10 +1,10 @@
 """Main script. Parses arguments and calls the appropriate function, either in src.node or in src.operation."""
 import argparse
+import logging
+import asyncio
 from src.node import Node
 from src.operation import get, post, sub, unsub, view, people_i_may_know
 from src.validator import IpPortValidator, PortValidator, PositiveIntegerValidator
-import logging
-import asyncio
 
 handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))

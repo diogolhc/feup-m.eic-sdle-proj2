@@ -1,6 +1,6 @@
 """Classes to represent a Merged timeline of posts from several users."""
-from tabulate import tabulate
 from datetime import datetime
+from tabulate import tabulate
 
 class MergedTimeline:
     def __init__(self, timelines, max_posts):
@@ -33,6 +33,7 @@ class MergedTimeline:
     
         self.posts = self.posts if max_posts is None else self.posts[:max_posts]
 
+    @staticmethod
     def from_serializable(data):
         return MergedTimeline(**data)
 

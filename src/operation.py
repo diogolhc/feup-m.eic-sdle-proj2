@@ -3,6 +3,7 @@ import logging
 from src.connection import request
 from src.data.username import Username
 from src.data.timeline import TimelineCache
+from src.data.merged_timeline import MergedTimeline
 
 log = logging.getLogger("timeline")
 
