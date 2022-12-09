@@ -18,6 +18,7 @@ class LocalConnection(BaseConnection):
         handle_unsub,
         handle_view,
         handle_people_i_may_know,
+        handle_get_subscribers
     ):
         self.handle_get = handle_get
         self.handle_post = handle_post
@@ -26,6 +27,7 @@ class LocalConnection(BaseConnection):
         self.handle_unsub = handle_unsub
         self.handle_view = handle_view
         self.handle_people_i_may_know = handle_people_i_may_know
+        self.handle_get_subscribers = handle_get_subscribers
 
     async def handle_command(self, command, message):
         if command == "get":
@@ -71,6 +73,14 @@ class LocalConnection(BaseConnection):
             if "max-people" not in message:
                 message["max-people"] = None
             return await self.handle_people_i_may_know(message["max-people"])
+        elif command == "get-subscribers":
+            if "userid" not in message:
+                return ErrorResponse("No userid provided.")
+            try:
+                userid = User.from_str(message["userid"])
+            except ValueError:
+                return ErrorResponse(f"Invalid userid: {message['userid']}")
+            return await self.handle_get_subscribers(userid)
         else:
             return ErrorResponse("Unknown command.")
 
