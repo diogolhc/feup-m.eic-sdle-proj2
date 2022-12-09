@@ -260,7 +260,7 @@ class Node:
                 #print("FRIEND OF SUB = " + str(sub))
                 #print("ME = " + str(self.userid))
 
-                if sub is self.userid:
+                if sub == self.userid:
                     #print("\nself\n")
                     continue
 
@@ -271,6 +271,9 @@ class Node:
                     continue
 
                 suggestions.add(sub)
+
+                #print("\nCOMMON KEYS:")
+                #print(common.keys())
 
                 if sub in common.keys():
                     common[sub].add(subscription)
