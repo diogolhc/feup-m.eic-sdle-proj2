@@ -116,9 +116,11 @@ class KademliaConnection:
         response = await self.connection.get(key)
         if response is None:
             return None
+        print("TEST KADEMLIA GET", key, response)
         return json.loads(response)
 
     async def put(self, key, value):
+        print("TEST KADEMLIA PUT", key, json.dumps(value))
         await self.connection.set(key, json.dumps(value))
 
     async def start(self, port, bootstrap_nodes):
