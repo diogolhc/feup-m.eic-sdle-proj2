@@ -38,6 +38,13 @@ async def post(filepath, local_port):
         print("Successfully posted to the timeline.")
 
 
+async def delete(post_id, local_port):
+    response = await execute({"command": "delete", "post-id": post_id}, local_port)
+
+    if response["status"] == "ok":
+        print(f"Successfully deleted post with id={post_id}.")
+
+
 async def sub(userid, local_port):
     userid = User(userid)
     response = await execute({"command": "sub", "userid": str(userid)}, local_port)

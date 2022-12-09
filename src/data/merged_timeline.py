@@ -1,6 +1,7 @@
 """Classes to represent a Merged timeline of posts from several users."""
 from datetime import datetime
 from tabulate import tabulate
+import copy
 from src.data.user import User
 
 
@@ -13,7 +14,7 @@ class MergedTimeline:
         all_posts = []
 
         for timeline in timelines:
-            posts = timeline.posts
+            posts = copy.deepcopy(timeline.posts)
 
             for post in posts:
                 post["userid"] = timeline.userid

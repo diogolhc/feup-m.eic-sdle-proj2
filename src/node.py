@@ -6,6 +6,7 @@ from src.data.timeline import Timeline
 from src.data.merged_timeline import MergedTimeline
 from src.data.subscriptions import Subscriptions
 from src.data.storage import PersistentStorage
+from src.data.next_post_id import NextPostId
 from src.connection import (
     request,
     LocalConnection,
@@ -34,6 +35,7 @@ class Node:
         self.local_connection = LocalConnection(
             self.handle_get,
             self.handle_post,
+            self.handle_delete,
             self.handle_sub,
             self.handle_unsub,
             self.handle_view,
@@ -55,6 +57,12 @@ class Node:
             self.subscriptions = Subscriptions.read(self.storage)
         except Exception as e:
             print("Could not read subscriptions from storage.", e)
+            exit(1)
+
+        try:
+            self.next_post_id = NextPostId.read(self.storage)
+        except Exception as e:
+            print("Could not read next post id from storage.", e)
             exit(1)
 
     async def get_local(self, userid, max_posts):
@@ -160,12 +168,13 @@ class Node:
     async def handle_post(self, content):
         post = None
         try:
-            post = self.timeline.add_post(content)
+            post = self.timeline.add_post(content, self.next_post_id.get_and_advance())
             self.timeline.store(self.storage)
             return OkResponse()
         except Exception as e:
             if post is not None:
                 self.timeline.remove_post(post)
+                self.next_post_id.rollback()
             print("Could not post message.", e)
             return ErrorResponse("Could not post message.")
 
@@ -188,6 +197,12 @@ class Node:
             self.subscriptions.subscriptions = subscriptions_backup
             print("Could not subscribe.", e)
             return ErrorResponse("Could not subscribe.")
+    
+    async def handle_delete(self, post_id):
+        if not self.timeline.remove_post_by_id(post_id):
+            return ErrorResponse("Post not found.")
+        self.timeline.store(self.storage)
+        return OkResponse()
 
     async def handle_unsub(self, userid):
         if userid == self.userid:
