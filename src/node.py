@@ -66,15 +66,15 @@ class Node:
             log.debug("Getting own timeline")
             return self.timeline.cache(max_posts)
 
-        return None # TODO for debug purposes
-
         # 2nd try: get cached timeline
         # TODO we might want this to be done only after step 3 (if the caller was handle_get())? i don't know
+        log.debug("Check if cached")
         if Timeline.exists(self.storage, userid):
-            log.debug("Getting chached timeline")
+            log.debug("Getting cached timeline")
             try:
                 timeline = Timeline.read(self.storage, userid)
                 if timeline.is_valid():
+                    log.debug("Returned cached timeline")
                     return timeline.cache(max_posts)
 
             except Exception as e:
@@ -103,6 +103,7 @@ class Node:
             log.debug(message)
             print(message)
         
+        log.debug("Trying fourth method")
 
         # 4th try: get timeline from a subscriber
         if subscribers is None:
@@ -115,22 +116,26 @@ class Node:
         HEURISTIC_PROBABILITY = 30
 
         for subscriber in subscribers:
+
+            if (self.userid.ip == subscriber.ip and self.userid.port == subscriber.port):
+                continue
+
             log.debug("Connecting to subscriber %s:%s", subscriber.ip, subscriber.port)
+
             response = await request(data, subscriber.ip, subscriber.port)
+
             if response["status"] == "ok":
                 log.debug("Timeline received")
-
                 timeline_t = Timeline.from_serializable(response["timeline"])
-
                 if last_update_check: # TODO fix this
+                    #log.debug("GET PEERS HERE 7 " + (timeline_t.last_updated).isoformat() + " "  + (last_update_check).isoformat())
                     if timeline_t.last_updated == last_update_check and rnd.randint(0, 100) < HEURISTIC_PROBABILITY and timeline:
                         break
                     if timeline_t.last_updated < last_update_check: # The timeline is older than the current one
-                        if timeline:
-                            break
-                        else:
-                            continue
-
+                        break
+                response["timeline"]['userid'] = str(response["timeline"]['userid'])
+                response['timeline']['valid_until'] = response['timeline']['valid_until'].isoformat()
+                response['timeline']['last_updated'] = response['timeline']['last_updated'].isoformat()
                 timeline = response["timeline"]
                 last_update_check = timeline_t.last_updated
             else:
@@ -140,9 +145,8 @@ class Node:
                     subscriber.port,
                     response["error"],
                 )
-
         if (not timeline) :
-            return ErrorResponse(f"No available source found. HERE1 " + str(len(subscribers)))
+            return ErrorResponse(f"No available source found.")
         else :
             return OkResponse({"timeline": timeline})
         
@@ -168,7 +172,8 @@ class Node:
         timeline = await self.get_local(userid, max_posts)
         if timeline is not None:
             return OkResponse({"timeline": timeline.to_serializable()})
-        return await self.get_peers(userid, max_posts)
+        response = await self.get_peers(userid, max_posts)
+        return response
 
     async def handle_post(self, content):
         post = None

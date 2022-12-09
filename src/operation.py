@@ -1,9 +1,10 @@
 """Operations made to the node via a local socket."""
 import logging
+
 from src.connection import request
-from src.data.user import User
-from src.data.timeline import TimelineCache
 from src.data.merged_timeline import MergedTimeline
+from src.data.timeline import TimelineCache
+from src.data.user import User
 
 log = logging.getLogger("timeline")
 
