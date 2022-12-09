@@ -22,14 +22,14 @@ class KademliaConnection:
 
     async def subscribe(self, userid, subscriptions):
         # This node owns this key. It can just set the value without worries.
-        await self.put(f"{userid}-subscribed", subscriptions)
+        await self.put(f"{self.userid}-subscribed", subscriptions)
 
         # This key is shared, so the logic is more complicated
         await self.set_subscription(f"{userid}-subscribers", self.userid, True)
 
     async def unsubscribe(self, userid, subscriptions):
         # This node owns this key. It can just set the value without worries.
-        await self.put(f"{userid}-subscribed", subscriptions)
+        await self.put(f"{self.userid}-subscribed", subscriptions)
 
         # This key is shared, so the logic is more complicated
         await self.set_subscription(f"{userid}-subscribers", self.userid, False)
@@ -116,11 +116,9 @@ class KademliaConnection:
         response = await self.connection.get(key)
         if response is None:
             return None
-        print("TEST KADEMLIA GET", key, response)
         return json.loads(response)
 
     async def put(self, key, value):
-        print("TEST KADEMLIA PUT", key, json.dumps(value))
         await self.connection.set(key, json.dumps(value))
 
     async def start(self, port, bootstrap_nodes):
