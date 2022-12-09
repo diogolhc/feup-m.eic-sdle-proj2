@@ -58,28 +58,28 @@ class Timeline:
         return data
 
     @staticmethod
-    def get_file(storage, userid):
+    def get_file(userid):
         return os.path.join(Timeline.TIMELINES_FOLDER, f"{userid.to_filename()}.json")
 
     @staticmethod
     def exists(storage, userid):
-        return storage.exists(Timeline.get_file(storage, userid))
+        return storage.exists(Timeline.get_file(userid))
 
     def store(self, storage):
-        storage.write(self.to_serializable(), Timeline.get_file(storage, self.userid))
+        storage.write(self.to_serializable(), Timeline.get_file(self.userid))
 
     @staticmethod
     def read(storage, userid):
         if Timeline.exists(storage, userid):
             return Timeline.from_serializable(
-                storage.read(Timeline.get_file(storage, userid))
+                storage.read(Timeline.get_file(userid))
             )
         else:
             return Timeline(userid, [])
 
     @staticmethod
     def delete(storage, userid):
-        storage.delete(Timeline.get_file(storage, userid))
+        storage.delete(Timeline.get_file(userid))
 
     def pretty_str(self):
         posts = [
@@ -135,7 +135,7 @@ class Timeline:
             + timedelta(
                 seconds=time_to_live
                 if time_to_live is not None
-                else Timeline.DEFAULT_CACHE_TIME_TO_LIVE
+                else Timeline.DEFAULT_CACHE_TIME_TO_LIVE # TODO time_to_live == None means infinite
             ),
         )
 
@@ -148,6 +148,7 @@ class TimelineCache(Timeline):
         self.valid_until = valid_until
 
     def is_valid(self):
+        return True # TODO adjust valid until for a reasonable interval
         return self.valid_until is None or datetime.now() < self.valid_until
 
     def cache(self, max_posts):

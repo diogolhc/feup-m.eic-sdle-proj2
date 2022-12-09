@@ -1,6 +1,7 @@
 """Class for the node that runs the timeline service."""
 import asyncio
 import logging
+import random as rnd
 from src.data.timeline import Timeline
 from src.data.merged_timeline import MergedTimeline
 from src.data.subscriptions import Subscriptions
@@ -104,18 +105,29 @@ class Node:
             if subscribers is None:
                 return ErrorResponse(f"No available source found.")
 
+        timeline = None
+        last_update_check = last_updated_after
+        HEURISTIC_PROBABILITY = 30
+
         for subscriber in subscribers:
             log.debug("Connecting to subscriber %s:%s", subscriber.ip, subscriber.port)
             response = await request(data, subscriber.ip, subscriber.port)
             if response["status"] == "ok":
-                timeline = Timeline.from_serializable(response["timeline"])
-                if timeline.last_updated <= last_updated_after:
-                    continue  # The timeline is older than the current one
+                log.debug("Timeline received")
 
-                # TODO the teacher suggested that instead of just returning this one,
-                #      we could have some heuristic probability of trying others until
-                #      we are confident that we have an updated enough timeline.
-                return OkResponse({"timeline": response["timeline"]})
+                timeline_t = Timeline.from_serializable(response["timeline"])
+
+                if last_update_check: # TODO fix this
+                    if timeline_t.last_updated == last_update_check and rnd.randint(0, 100) < HEURISTIC_PROBABILITY and timeline:
+                        break
+                    if timeline_t.last_updated < last_update_check: # The timeline is older than the current one
+                        if timeline:
+                            break
+                        else:
+                            continue
+
+                timeline = response["timeline"]
+                last_update_check = timeline_t.last_updated
             else:
                 log.debug(
                     "Subscriber %s:%s responded with error: %s",
@@ -124,12 +136,16 @@ class Node:
                     response["error"],
                 )
 
-        return ErrorResponse(f"No available source found.")
+        if (not timeline) :
+            return ErrorResponse(f"No available source found. HERE1 " + str(len(subscribers)))
+        else :
+            return OkResponse({"timeline": timeline})
+        
 
     async def check_not_subscribed(self, userid):
         subscribers = await self.kademlia_connection.get_subscribers(userid)
         if self.userid in subscribers:
-            await self.kademlia_connection.unsubscribe(userid, subscribers)
+            await self.kademlia_connection.unsubscribe(userid, [str(s) for s in subscribers])
 
     async def handle_public_get(self, userid, max_posts):
         if userid != self.userid and userid not in self.subscriptions.subscriptions:
@@ -149,11 +165,10 @@ class Node:
             return OkResponse({"timeline": timeline.to_serializable()})
         return await self.get_peers(userid, max_posts)
 
-    async def handle_post(self, filepath):
+    async def handle_post(self, content):
         post = None
         try:
-            with open(filepath, "r") as f:
-                post = self.timeline.add_post(f.read(), self.next_post_id.get_and_advance())
+            post = self.timeline.add_post(content, self.next_post_id.get_and_advance())
             self.timeline.store(self.storage)
             return OkResponse()
         except Exception as e:
@@ -234,28 +249,53 @@ class Node:
         common = {}
 
         for subscription in self.subscriptions.to_serializable():
-            subscriptions = await self.kademlia_connection.get_subscribed(subscription)
+            #print("SUB = " + str(subscription))
+            #print("\nIN FOR\n")
+            current_subscriptions = await self.kademlia_connection.get_subscribed(subscription)
 
-            suggestions.update(subscriptions)
+            #print("\nSIZE OF SUBSCRIPTIONS: " + str(len(current_subscriptions)) + "\n")
 
-            for sub in subscriptions:
+            for sub in current_subscriptions:
+                #print("FRIEND OF SUB = " + str(sub))
+                #print("ME = " + str(self.userid))
+
+                if sub is self.userid:
+                    #print("\nself\n")
+                    continue
+
+                sub = str(sub)
+
+                if sub in self.subscriptions.to_serializable():
+                    #print("ALREADY IN SUBS")
+                    continue
+
+                suggestions.add(sub)
+
                 if sub in common.keys():
                     common[sub].add(subscription)
                 else:
                     common[sub] = {subscription}
 
-        response = [{"userid": s, "common": common[s]} for s in suggestions]
+        response = []
+        response = [{"userid": s, "common": list(common[s])} for s in suggestions]
 
         response.sort(key=lambda x: len(x["common"]), reverse=True)
 
-        response = response if max_users is None else response[:max_users]
+        #print("\n\nRESPONSE = ")
+        #print(response)
+        #print("\n\n")
 
-        return OkResponse(response)
+        r = {"users": response if max_users is None else response[:max_users]}
+
+        #print("\n\nREAL RESPONSE = ")
+        #print(r)
+
+        return OkResponse(r)            
 
     async def update_cached_timeline(self, userid):
         subscribers = await self.kademlia_connection.get_subscribers(userid)
         if self.userid not in subscribers:
-            await self.kademlia_connection.subscribe(userid, subscribers)
+            await self.kademlia_connection.subscribe(userid, [str(s) for s in subscribers])
 
         last_updated = None
         if Timeline.exists(self.storage, userid):

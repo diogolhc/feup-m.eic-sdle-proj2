@@ -22,14 +22,14 @@ class KademliaConnection:
 
     async def subscribe(self, userid, subscriptions):
         # This node owns this key. It can just set the value without worries.
-        await self.put(f"{userid}-subscribed", [s.__str__() for s in subscriptions])
+        await self.put(f"{self.userid}-subscribed", subscriptions)
 
         # This key is shared, so the logic is more complicated
         await self.set_subscription(f"{userid}-subscribers", self.userid, True)
 
     async def unsubscribe(self, userid, subscriptions):
         # This node owns this key. It can just set the value without worries.
-        await self.put(f"{userid}-subscribed", [s.__str__() for s in subscriptions])
+        await self.put(f"{self.userid}-subscribed", subscriptions)
 
         # This key is shared, so the logic is more complicated
         await self.set_subscription(f"{userid}-subscribers", self.userid, False)

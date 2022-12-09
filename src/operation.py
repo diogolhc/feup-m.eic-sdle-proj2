@@ -30,7 +30,9 @@ async def get(userid, local_port, max_posts=None):
 
 
 async def post(filepath, local_port):
-    response = await execute({"command": "post", "filepath": filepath}, local_port)
+    with open(filepath, "r") as f:
+        content = f.read()
+    response = await execute({"command": "post", "content": content}, local_port)
 
     if response["status"] == "ok":
         print("Successfully posted to the timeline.")
@@ -72,4 +74,4 @@ async def people_i_may_know(local_port, max_users=None):
     )
 
     if response["status"] == "ok":
-        print(response["users"].pretty_str())
+        print(response["users"])

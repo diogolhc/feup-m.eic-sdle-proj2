@@ -38,9 +38,9 @@ class LocalConnection(BaseConnection):
                 return ErrorResponse(f"Invalid userid: {message['userid']}")
             return await self.handle_get(userid, message["max-posts"])
         elif command == "post":
-            if "filepath" not in message:
-                return ErrorResponse("No filepath provided.")
-            return await self.handle_post(message["filepath"])
+            if "content" not in message:
+                return ErrorResponse("No content provided.")
+            return await self.handle_post(message["content"])
         elif command == "delete":
             if "post-id" not in message:
                 return ErrorResponse("No post-id provided.")
