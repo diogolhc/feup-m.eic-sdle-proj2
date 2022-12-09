@@ -40,6 +40,7 @@ class Node:
             self.handle_unsub,
             self.handle_view,
             self.handle_people_i_may_know,
+            self.handle_get_subscribers
         )
         self.public_connection = PublicConnection(self.handle_public_get)
 
@@ -294,12 +295,17 @@ class Node:
         #print("\n\nREAL RESPONSE = ")
         #print(r)
 
-        return OkResponse(r)            
+        return OkResponse(r)
+
+    async def handle_get_subscribers(self, userid):
+        return OkResponse({"subscribers": [str(s) for s in await self.kademlia_connection.get_subscribers(userid)]})
 
     async def update_cached_timeline(self, userid):
         subscribers = await self.kademlia_connection.get_subscribers(userid)
         if self.userid not in subscribers:
             await self.kademlia_connection.subscribe(userid, [str(s) for s in subscribers])
+        else:
+            await self.kademlia_connection.republish(userid)
 
         last_updated = None
         if Timeline.exists(self.storage, userid):

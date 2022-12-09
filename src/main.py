@@ -3,7 +3,7 @@ import argparse
 import logging
 import asyncio
 from src.node import Node
-from src.operation import get, post, delete, sub, unsub, view, people_i_may_know
+from src.operation import get, post, delete, sub, unsub, view, people_i_may_know, get_subscribers
 from src.validator import IpPortValidator, PortValidator, PositiveIntegerValidator, NonNegativeIntegerValidator
 
 handler = logging.StreamHandler()
@@ -24,7 +24,8 @@ def parse_arguments():
     unsub_parser = subparsers.add_parser("unsub", description="Unsubscribe to a user's timeline.")
     view_parser = subparsers.add_parser("view", description="View your feed with the posts made by you and the users you are subscribed to.")
     may_know_parser = subparsers.add_parser("people-i-may-know", description="Find people you may know based on your subscriptions.")
-    all_parsers = [start_parser, post_parser, delete_parser, get_parser, sub_parser, unsub_parser, view_parser, may_know_parser]
+    get_subscriptions = subparsers.add_parser("get-subscribers", description="Get all subscriptions of a user.")
+    all_parsers = [start_parser, post_parser, delete_parser, get_parser, sub_parser, unsub_parser, view_parser, may_know_parser, get_subscriptions]
 
     for subparser in all_parsers:
         # Adding command here instead of main parser so that they appear
@@ -45,6 +46,7 @@ def parse_arguments():
     view_parser.add_argument("max_posts", help="Limit the number of posts to get.", type=PositiveIntegerValidator.positive_integer, default=None, nargs="?")
     may_know_parser.add_argument("max_users", help="Limit the number of users to get.", type=PositiveIntegerValidator.positive_integer, default=None, nargs="?")
     delete_parser.add_argument("post_id", help="ID of post to delete.", type=NonNegativeIntegerValidator.non_negative_integer)
+    get_subscriptions.add_argument("userid", help="ID of user to get subscriptions of.", type=IpPortValidator(Node.DEFAULT_PUBLIC_PORT).ip_address)
 
     for subparser in all_parsers:
         # Adding command here so it appears at the end of the help
@@ -82,6 +84,8 @@ def main():
         run = view(local_port=args.local_port, max_posts=args.max_posts)
     elif args.command == "people-i-may-know":
         run = people_i_may_know(local_port=args.local_port, max_users=args.max_users)
+    elif args.command == "get-subscribers": # TODO: maybe remove (?)
+        run = get_subscribers(args.userid, local_port=args.local_port)
     
     asyncio.run(run, debug=args.debug)
 
