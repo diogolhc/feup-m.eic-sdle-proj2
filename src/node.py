@@ -2,19 +2,14 @@
 import asyncio
 import logging
 import random as rnd
-from src.data.timeline import Timeline
+
+from src.connection import (ErrorResponse, KademliaConnection, LocalConnection,
+                            OkResponse, PublicConnection, request)
 from src.data.merged_timeline import MergedTimeline
-from src.data.subscriptions import Subscriptions
-from src.data.storage import PersistentStorage
 from src.data.next_post_id import NextPostId
-from src.connection import (
-    request,
-    LocalConnection,
-    PublicConnection,
-    KademliaConnection,
-    OkResponse,
-    ErrorResponse,
-)
+from src.data.storage import PersistentStorage
+from src.data.subscriptions import Subscriptions
+from src.data.timeline import Timeline
 from src.data.user import User
 
 log = logging.getLogger("timeline")
@@ -69,11 +64,15 @@ class Node:
     async def get_local(self, userid, max_posts):
         # 1st try: get own timeline
         if userid == self.userid:
+            log.debug("Getting own timeline")
             return self.timeline.cache(max_posts)
+
+        return None # TODO for debug purposes
 
         # 2nd try: get cached timeline
         # TODO we might want this to be done only after step 3 (if the caller was handle_get())? i don't know
         if Timeline.exists(self.storage, userid):
+            log.debug("Getting chached timeline")
             try:
                 timeline = Timeline.read(self.storage, userid)
                 if timeline.is_valid():
@@ -95,10 +94,16 @@ class Node:
         }
 
         log.debug("Connecting to %s", userid)
-        response = await request(data, userid.ip, userid.port)
 
-        if response["status"] == "ok":
-            return OkResponse({"timeline": response["timeline"]})
+        try:
+            response = await request(data, userid.ip, userid.port)
+            if response["status"] == "ok":
+                return OkResponse({"timeline": response["timeline"]})
+        except Exception as e:
+            message = ("Could not connect to %s", userid)
+            log.debug(message)
+            print(message)
+        
 
         # 4th try: get timeline from a subscriber
         if subscribers is None:
