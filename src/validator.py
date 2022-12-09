@@ -48,3 +48,12 @@ class PositiveIntegerValidator:
         if i <= 0:
             raise ValueError
         return i
+
+class NonNegativeIntegerValidator:
+    @staticmethod
+    def non_negative_integer(s):
+        """Validates and parses a non-negative integer."""
+        i = int(s)
+        if i < 0:
+            raise ValueError
+        return i
