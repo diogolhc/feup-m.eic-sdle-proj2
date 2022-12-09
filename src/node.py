@@ -170,6 +170,7 @@ class Node:
         try:
             post = self.timeline.add_post(content, self.next_post_id.get_and_advance())
             self.timeline.store(self.storage)
+            self.next_post_id.store(self.storage)
             return OkResponse()
         except Exception as e:
             if post is not None:
