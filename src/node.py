@@ -335,20 +335,20 @@ class Node:
             subscribers=subscribers,
             last_updated_after=last_updated,
         )
-        #if response.status == "ok":
-        #    try:
-        #        Timeline.from_serializable(response.data["timeline"]).store(
-        #            self.storage
-        #        )
-        #        log.debug("Updated cached timeline for %s", userid)
-        #    except Exception as e:
-        #        log.debug("Could not update cached timeline for %s: %s", userid, e)
-        #else:
-        #    log.debug(
-        #        "Could not update cached timeline for %s: %s",
-        #        userid,
-        #        response.data["error"],
-        #    )
+        if response.status == "ok":
+            try:
+                Timeline.from_serializable(response.data["timeline"]).store(
+                    self.storage
+                )
+                log.debug("Updated cached timeline for %s", userid)
+            except Exception as e:
+                log.debug("Could not update cached timeline for %s: %s", userid, e)
+        else:
+            log.debug(
+                "Could not update cached timeline for %s: %s",
+                userid,
+                response.data["error"],
+            )
 
     async def run(
         self, port, bootstrap_nodes, local_port, cache_frequency, max_cached_posts
