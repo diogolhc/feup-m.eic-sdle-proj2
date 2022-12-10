@@ -9,7 +9,6 @@ from src.data.user import User
 
 class Timeline:
     TIMELINES_FOLDER = "timelines"
-    DEFAULT_CACHE_TIME_TO_LIVE = 60  # TODO good value?
 
     def __init__(self, userid, posts):
         self.userid = userid
@@ -106,7 +105,6 @@ class Timeline:
         return tabulate(tabledata, headers=["id", "time", "content"])
 
     def cache(self, max_posts, time_to_live=None):
-
         posts = [
             {
                 "id": p["id"],
@@ -128,17 +126,15 @@ class Timeline:
         ]
 
         now = datetime.now()
+        valid_until = None
+        if time_to_live is not None:
+            valid_until = now + timedelta(seconds=time_to_live)
         return TimelineCache(
             userid=self.userid,
             posts=all_posts if max_posts is None else all_posts[:max_posts],
             total_posts=len(self.posts),
             last_updated=now,
-            valid_until=now
-            + timedelta(
-                seconds=time_to_live
-                if time_to_live is not None
-                else Timeline.DEFAULT_CACHE_TIME_TO_LIVE # TODO time_to_live == None means infinite
-            ),
+            valid_until=valid_until,
         )
 
 

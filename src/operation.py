@@ -11,9 +11,7 @@ log = logging.getLogger("timeline")
 
 async def execute(data, local_port):
     log.debug("Connecting to local server on port %s", local_port)
-    response = await request(
-        data, "127.0.0.1", local_port
-    )  # TODO should we be using 127.0.0.1 hardcoded here instead of ip from the userid?
+    response = await request(data, "127.0.0.1", local_port)
 
     if response["status"] != "ok":
         print(f"Error: {response['error']}")
@@ -76,13 +74,3 @@ async def people_i_may_know(local_port, max_users=None):
 
     if response["status"] == "ok":
         print(response["users"])
-
-
-async def get_subscribers(userid, local_port):
-    userid = User(userid)
-    response = await execute(
-        {"command": "get-subscribers", "userid": str(userid)}, local_port
-    )
-
-    if response["status"] == "ok":
-        print(response["subscribers"])

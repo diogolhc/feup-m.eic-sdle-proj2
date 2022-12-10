@@ -36,8 +36,7 @@ class Node:
             self.handle_sub,
             self.handle_unsub,
             self.handle_view,
-            self.handle_people_i_may_know,
-            self.handle_get_subscribers
+            self.handle_people_i_may_know
         )
         self.public_connection = PublicConnection(self.handle_public_get)
 
@@ -66,18 +65,13 @@ class Node:
     async def get_local(self, userid, max_posts):
         # 1st try: get own timeline
         if userid == self.userid:
-            log.debug("Getting own timeline")
-            return self.timeline.cache(max_posts)
+            return self.timeline.cache(max_posts, self.time_to_live)
 
         # 2nd try: get cached timeline
-        # TODO we might want this to be done only after step 3 (if the caller was handle_get())? i don't know
-        log.debug("Check if cached")
         if Timeline.exists(self.storage, userid):
-            log.debug("Getting cached timeline")
             try:
                 timeline = Timeline.read(self.storage, userid)
                 if timeline.is_valid():
-                    log.debug("Returned cached timeline")
                     return timeline.cache(max_posts)
 
             except Exception as e:
@@ -88,7 +82,6 @@ class Node:
     async def get_peers(
         self, userid, max_posts, subscribers=None, last_updated_after=None
     ):
-        # TODO if we are subscribed to userid, maybe we can update our cache with the result of this function?
         # 3rd try: get timeline directly from owner
         data = {
             "command": "get-timeline",
@@ -297,9 +290,6 @@ class Node:
 
         return OkResponse(r)
 
-    async def handle_get_subscribers(self, userid):
-        return OkResponse({"subscribers": [str(s) for s in await self.kademlia_connection.get_subscribers(userid)]})
-
     async def update_cached_timeline(self, userid):
         subscribers = await self.kademlia_connection.get_subscribers(userid)
         if self.userid not in subscribers:
@@ -331,13 +321,14 @@ class Node:
                 log.debug("Could not update cached timeline for %s: %s", userid, e)
 
     async def run(
-        self, port, bootstrap_nodes, local_port, cache_frequency, max_cached_posts
+        self, port, bootstrap_nodes, local_port, cache_frequency, time_to_live, max_cached_posts
     ):
         await self.kademlia_connection.start(port, bootstrap_nodes)
         asyncio.create_task(self.local_connection.start(local_port))
         asyncio.create_task(self.public_connection.start(self.userid))
 
         self.max_cached_posts = max_cached_posts
+        self.time_to_live = time_to_live
         while True:
             for subscription in self.subscriptions.subscriptions:
                 asyncio.create_task(self.update_cached_timeline(subscription))

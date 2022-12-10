@@ -14,7 +14,7 @@ class KademliaConnection:
     BACKOFF_RATE = 1.5
     BACKOFF_MIN_RANDOM_WAIT_S = 0.2
     BACKOFF_MAX_RANDOM_WAIT_S = 1.0
-    MAX_BACKOFF_S = 15  # TODO: maybe this should be configured alongside cache period
+    MAX_BACKOFF_S = 15
 
     def __init__(self, userid):
         self.connection = None

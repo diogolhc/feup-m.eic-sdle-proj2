@@ -36,6 +36,7 @@ def parse_arguments():
     start_parser.add_argument("-k", "--kademlia-port", help="Kademlia port number to serve at.", type=PortValidator.port, default=Node.DEFAULT_KADEMLIA_PORT)
     start_parser.add_argument("-b", "--bootstrap-nodes", help="IP addresses of existing nodes.", type=IpPortValidator(Node.DEFAULT_KADEMLIA_PORT).ip_address, nargs='+', default=[])
     start_parser.add_argument("-f", "--cache-frequency", help="The time in seconds it takes between caching periods.", type=PositiveIntegerValidator.positive_integer, default=Node.DEFAULT_SLEEP_TIME_BETWEEN_CACHING)
+    start_parser.add_argument("-t", "--cache-time-to-live", help="The maximum time (in seconds) a cache from this node's timeline is valid for.", type=PositiveIntegerValidator.positive_integer, default=None)
     start_parser.add_argument("-c", "--max-cached-posts", help="The maximum number of posts to cache per subscription.", type=PositiveIntegerValidator.positive_integer, default=Node.DEFAULT_MAX_CACHED_POSTS)
 
     post_parser.add_argument("filepath", help="Path to file to post.")
@@ -68,6 +69,7 @@ def main():
             args.bootstrap_nodes,
             local_port=args.local_port,
             cache_frequency=args.cache_frequency,
+            time_to_live=args.time_to_live,
             max_cached_posts=args.max_cached_posts
         )
     elif args.command == "get":
@@ -84,8 +86,6 @@ def main():
         run = view(local_port=args.local_port, max_posts=args.max_posts)
     elif args.command == "people-i-may-know":
         run = people_i_may_know(local_port=args.local_port, max_users=args.max_users)
-    elif args.command == "get-subscribers": # TODO: maybe remove (?)
-        run = get_subscribers(args.userid, local_port=args.local_port)
     
     asyncio.run(run, debug=args.debug)
 

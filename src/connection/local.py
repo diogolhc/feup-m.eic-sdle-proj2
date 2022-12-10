@@ -73,14 +73,6 @@ class LocalConnection(BaseConnection):
             if "max-people" not in message:
                 message["max-people"] = None
             return await self.handle_people_i_may_know(message["max-people"])
-        elif command == "get-subscribers":
-            if "userid" not in message:
-                return ErrorResponse("No userid provided.")
-            try:
-                userid = User.from_str(message["userid"])
-            except ValueError:
-                return ErrorResponse(f"Invalid userid: {message['userid']}")
-            return await self.handle_get_subscribers(userid)
         else:
             return ErrorResponse("Unknown command.")
 
