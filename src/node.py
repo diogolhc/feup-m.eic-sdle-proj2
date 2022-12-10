@@ -21,6 +21,8 @@ class Node:
     DEFAULT_PUBLIC_PORT = 8000
     DEFAULT_KADEMLIA_PORT = 8468
     DEFAULT_LOCAL_PORT = 8600
+    TRY_ANOTHER_SUBSCRIBER_PROBABILITY = 0.75
+    TRY_ANOTHER_SUBSCRIBER_PROBABILITY_DECAY = 0.5
 
     def __init__(self, userid):
         self.userid = User(userid)
@@ -104,63 +106,42 @@ class Node:
             message = ("Could not connect to %s", userid)
             log.debug(message)
             print(message)
-        
-        log.debug("Trying fourth method")
 
         # 4th try: get timeline from a subscriber
         if subscribers is None:
             subscribers = await self.kademlia_connection.get_subscribers(userid)
             if subscribers is None:
-                return ErrorResponse(f"No available source found. 1")
+                return ErrorResponse(f"No available source found.")
 
         timeline = None
         last_update_check = last_updated_after
-        heuristic_probability = 75.0
+        heuristic_probability = self.TRY_ANOTHER_SUBSCRIBER_PROBABILITY
         rnd.shuffle(subscribers)
 
         for subscriber in subscribers:
-
-            if (self.userid.ip == subscriber.ip and self.userid.port == subscriber.port):
+            if self.userid == subscriber:
                 continue
 
-            log.debug("Connecting to subscriber %s:%s", subscriber.ip, subscriber.port)
-
+            log.debug("Connecting to subscriber %s", subscriber)
             response = await request(data, subscriber.ip, subscriber.port)
 
             if response["status"] == "ok":
-                log.debug("Timeline received")
-                timeline_t = Timeline.from_serializable(response["timeline"])
-                if last_update_check:
-                    t1 = rnd.randint(0, 100) < heuristic_probability
-                    log.debug("Second get peer fase equal=%s heuristic=%s %s", timeline_t.last_updated == last_update_check, t1, timeline != None)
-                    if timeline_t.last_updated <= last_update_check and timeline:
-                        heuristic_probability /= 2.0
-                        if (not t1):
-                            break
-                        else:
-                            continue   
-                else:
-                    log.debug("First get peer fase")
-                # TODO maybe there is a better fix for this?
-                response["timeline"]['userid'] = str(response["timeline"]['userid'])
-                response['timeline']['valid_until'] = response['timeline']['valid_until'].isoformat()
-                response['timeline']['last_updated'] = response['timeline']['last_updated'].isoformat()
-                timeline = response["timeline"]
-                last_update_check = timeline_t.last_updated
+                response_timeline = Timeline.from_serializable(response["timeline"])
+                if last_update_check and response_timeline.last_updated <= last_update_check:
+                    if rnd.random() >= heuristic_probability:
+                        break
+                    heuristic_probability *= self.TRY_ANOTHER_SUBSCRIBER_PROBABILITY_DECAY
                 
+                timeline = response_timeline
+                last_update_check = response_timeline.last_updated
             else:
-                log.debug(
-                    "Subscriber %s:%s responded with error: %s",
-                    subscriber.ip,
-                    subscriber.port,
-                    response["error"],
-                )
-        if (not timeline) :
-            return ErrorResponse(f"No available source found.")
-        else :
-            return OkResponse({"timeline": timeline})
+                log.debug("Subscriber %s responded with error: %s", subscriber, response["error"])
         
-
+        if timeline:
+            return OkResponse({"timeline": timeline.to_serializable()})
+        else:
+            return ErrorResponse(f"No available source found.")
+    
     async def check_not_subscribed(self, userid):
         subscribers = await self.kademlia_connection.get_subscribers(userid)
         if self.userid in subscribers:
@@ -332,12 +313,14 @@ class Node:
                 last_updated = Timeline.read(self.storage, userid).last_updated
             except Exception as e:
                 log.debug("Could not read cached timeline for %s: %s", userid, e)
+        
         response = await self.get_peers(
             userid,
             self.max_cached_posts,
             subscribers=subscribers,
             last_updated_after=last_updated,
         )
+
         if response.status == "ok":
             try:
                 Timeline.from_serializable(response.data["timeline"]).store(
@@ -346,18 +329,10 @@ class Node:
                 log.debug("Updated cached timeline for %s", userid)
             except Exception as e:
                 log.debug("Could not update cached timeline for %s: %s", userid, e)
-        else:
-            log.debug(
-                "Could not update cached timeline for %s: %s",
-                userid,
-                response.data["error"],
-            )
 
     async def run(
         self, port, bootstrap_nodes, local_port, cache_frequency, max_cached_posts
     ):
-        # TODO the teacher talked about synchronizing clocks between nodes, but I don't know why that would be necessary in this project.
-        #      anyway, if we decide to do that, it should be done only after everything else is done, probably.
         await self.kademlia_connection.start(port, bootstrap_nodes)
         asyncio.create_task(self.local_connection.start(local_port))
         asyncio.create_task(self.public_connection.start(self.userid))
