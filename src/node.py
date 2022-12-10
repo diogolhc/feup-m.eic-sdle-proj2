@@ -73,6 +73,8 @@ class Node:
                 timeline = Timeline.read(self.storage, userid)
                 if timeline.is_valid():
                     return timeline.cache(max_posts)
+                else:
+                    Timeline.delete(self.storage, userid)
 
             except Exception as e:
                 print("Could not read timeline from storage.", e)
@@ -280,7 +282,11 @@ class Node:
         last_updated = None
         if Timeline.exists(self.storage, userid):
             try:
-                last_updated = Timeline.read(self.storage, userid).last_updated
+                timeline = Timeline.read(self.storage, userid)
+                if timeline.is_valid():
+                    last_updated = timeline.last_updated
+                else:
+                    Timeline.delete(self.storage, userid)
             except Exception as e:
                 log.debug("Could not read cached timeline for %s: %s", userid, e)
         

@@ -67,7 +67,7 @@ def main():
             args.bootstrap_nodes,
             local_port=args.local_port,
             cache_frequency=args.cache_frequency,
-            time_to_live=args.time_to_live,
+            time_to_live=args.cache_time_to_live,
             max_cached_posts=args.max_cached_posts
         )
     elif args.command == "get":
