@@ -1,7 +1,9 @@
 """Classes to represent a timeline of posts from a user and a cached timeline."""
-from datetime import datetime, timedelta
 import os
+from datetime import datetime, timedelta
+
 from tabulate import tabulate
+
 from src.data.user import User
 
 
@@ -16,12 +18,10 @@ class Timeline:
     def is_valid(self):
         return True  # A non-cached timeline is always valid
 
-    def add_post(self, post):
+    def add_post(self, post, post_id): # post_id was already validated
         self.posts.append(
             {
-                "id": len(
-                    self.posts
-                ),  # TODO if we ever want to support a delete operation, this is not correct. We would need to use a real counter in persistent storage.
+                "id": post_id,
                 "timestamp": datetime.now().isoformat(),
                 "content": post,
             }
@@ -29,7 +29,23 @@ class Timeline:
         return self.posts[-1]
 
     def remove_post(self, post):
-        self.posts.remove(post)
+        try:
+            self.posts.remove(post)
+            return True
+        except ValueError:
+            return False
+
+    def get_post_by_id(self, post_id):
+        for post in self.posts:
+            if post["id"] == post_id:
+                return post
+        return None
+
+    def remove_post_by_id(self, post_id):
+        post = self.get_post_by_id(post_id)
+        if post is not None:
+            return self.remove_post(post)
+        return False
 
     @staticmethod
     def from_serializable(data):
@@ -134,7 +150,6 @@ class TimelineCache(Timeline):
         self.valid_until = valid_until
 
     def is_valid(self):
-        return True # TODO adjust valid until for a reasonable interval
         return self.valid_until is None or datetime.now() < self.valid_until
 
     def cache(self, max_posts):

@@ -26,6 +26,12 @@ class KademliaConnection:
 
         # This key is shared, so the logic is more complicated
         await self.set_subscription(f"{userid}-subscribers", self.userid, True)
+    
+    async def republish(self, userid):
+        key = f"{userid}-subscribers"
+        response = await self.get(key)
+        if response is not None:
+            await self.put(key, response)
 
     async def unsubscribe(self, userid, subscriptions):
         # This node owns this key. It can just set the value without worries.

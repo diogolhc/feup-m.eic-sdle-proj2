@@ -1,8 +1,9 @@
 """Base class for LocalConnection and PublicConnection."""
-from src.connection.response import ErrorResponse
-import logging
-import json
 import asyncio
+import json
+import logging
+
+from src.connection.response import ErrorResponse
 
 log = logging.getLogger('timeline')
 
