@@ -1,5 +1,4 @@
 """Represents the current post id of the local user."""
-from src.data.user import User
 
 
 class NextPostId:

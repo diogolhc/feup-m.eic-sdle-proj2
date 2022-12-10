@@ -3,7 +3,7 @@ import argparse
 import logging
 import asyncio
 from src.node import Node
-from src.operation import get, post, remove, sub, unsub, view, people_i_may_know, get_subscribers
+from src.operation import get, post, remove, sub, unsub, view, people_i_may_know
 from src.validator import IpPortValidator, PortValidator, PositiveIntegerValidator, NonNegativeIntegerValidator
 
 handler = logging.StreamHandler()
@@ -16,7 +16,7 @@ def parse_arguments():
 
     subparsers = parser.add_subparsers(required=True, dest="command")
 
-    start_parser = subparsers.add_parser("start", description="Join network of timelines.")
+    start_parser = subparsers.add_parser("start", description="Start running the user's node.")
     post_parser = subparsers.add_parser("post", description="Post in your timeline.")
     remove_parser = subparsers.add_parser("remove", description="Remove a post from your timeline.")
     get_parser = subparsers.add_parser("get", description="Find a user's timeline.")
