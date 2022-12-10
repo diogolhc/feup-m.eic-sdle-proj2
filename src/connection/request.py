@@ -17,7 +17,7 @@ async def request(data, ip, port):
     
     data = await reader.read()
     response = json.loads(data.decode())
-    log.debug("Received message: %s", response)
+    log.debug("Received message: %s from %s:%s", response, ip, port)
     writer.close()
     await writer.wait_closed()
 

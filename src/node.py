@@ -110,11 +110,11 @@ class Node:
         if subscribers is None:
             subscribers = await self.kademlia_connection.get_subscribers(userid)
             if subscribers is None:
-                return ErrorResponse(f"No available source found.")
+                return ErrorResponse(f"No available source found. 1")
 
         timeline = None
         last_update_check = last_updated_after
-        HEURISTIC_PROBABILITY = 30
+        heuristic_probability = 75.0
 
         for subscriber in subscribers:
 
@@ -128,17 +128,23 @@ class Node:
             if response["status"] == "ok":
                 log.debug("Timeline received")
                 timeline_t = Timeline.from_serializable(response["timeline"])
-                if last_update_check: # TODO fix this
-                    #log.debug("GET PEERS HERE 7 " + (timeline_t.last_updated).isoformat() + " "  + (last_update_check).isoformat())
-                    if timeline_t.last_updated == last_update_check and rnd.randint(0, 100) < HEURISTIC_PROBABILITY and timeline:
-                        break
-                    if timeline_t.last_updated < last_update_check: # The timeline is older than the current one
-                        break
+                if last_update_check:
+                    t1 = rnd.randint(0, 100) < heuristic_probability
+                    log.debug("Second get peer fase equal=%s heuristic=%s %s", timeline_t.last_updated == last_update_check, t1, timeline != None)
+                    if timeline_t.last_updated <= last_update_check and timeline:
+                        heuristic_probability /= 2.0
+                        if (not t1):
+                            break
+                        else:
+                            continue   
+                else:
+                    log.debug("First get peer fase")
                 response["timeline"]['userid'] = str(response["timeline"]['userid'])
                 response['timeline']['valid_until'] = response['timeline']['valid_until'].isoformat()
                 response['timeline']['last_updated'] = response['timeline']['last_updated'].isoformat()
                 timeline = response["timeline"]
                 last_update_check = timeline_t.last_updated
+                
             else:
                 log.debug(
                     "Subscriber %s:%s responded with error: %s",
@@ -329,20 +335,20 @@ class Node:
             subscribers=subscribers,
             last_updated_after=last_updated,
         )
-        if response.status == "ok":
-            try:
-                Timeline.from_serializable(response.data["timeline"]).store(
-                    self.storage
-                )
-                log.debug("Updated cached timeline for %s", userid)
-            except Exception as e:
-                log.debug("Could not update cached timeline for %s: %s", userid, e)
-        else:
-            log.debug(
-                "Could not update cached timeline for %s: %s",
-                userid,
-                response.data["error"],
-            )
+        #if response.status == "ok":
+        #    try:
+        #        Timeline.from_serializable(response.data["timeline"]).store(
+        #            self.storage
+        #        )
+        #        log.debug("Updated cached timeline for %s", userid)
+        #    except Exception as e:
+        #        log.debug("Could not update cached timeline for %s: %s", userid, e)
+        #else:
+        #    log.debug(
+        #        "Could not update cached timeline for %s: %s",
+        #        userid,
+        #        response.data["error"],
+        #    )
 
     async def run(
         self, port, bootstrap_nodes, local_port, cache_frequency, max_cached_posts
