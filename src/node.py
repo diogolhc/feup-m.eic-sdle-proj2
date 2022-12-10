@@ -63,11 +63,11 @@ class Node:
             exit(1)
 
     async def get_local(self, userid, max_posts):
-        # 1st try: get own timeline
+        # get own timeline
         if userid == self.userid:
             return self.timeline.cache(max_posts, self.time_to_live)
 
-        # 2nd try: get cached timeline
+        # get cached timeline
         if Timeline.exists(self.storage, userid):
             try:
                 timeline = Timeline.read(self.storage, userid)
@@ -82,7 +82,7 @@ class Node:
     async def get_peers(
         self, userid, max_posts, subscribers=None, last_updated_after=None
     ):
-        # 3rd try: get timeline directly from owner
+        # get timeline directly from owner
         data = {
             "command": "get-timeline",
             "userid": str(userid),
@@ -100,7 +100,7 @@ class Node:
             log.debug(message)
             print(message)
 
-        # 4th try: get timeline from a subscriber
+        # get timeline from a subscriber
         if subscribers is None:
             subscribers = await self.kademlia_connection.get_subscribers(userid)
             if subscribers is None:
@@ -173,6 +173,12 @@ class Node:
             print("Could not post message.", e)
             return ErrorResponse("Could not post message.")
 
+    async def handle_remove(self, post_id):
+        if not self.timeline.remove_post_by_id(post_id):
+            return ErrorResponse("Post not found.")
+        self.timeline.store(self.storage)
+        return OkResponse()
+
     async def handle_sub(self, userid):
         if userid == self.userid:
             return ErrorResponse("Cannot subscribe to self.")
@@ -192,12 +198,6 @@ class Node:
             self.subscriptions.subscriptions = subscriptions_backup
             print("Could not subscribe.", e)
             return ErrorResponse("Could not subscribe.")
-    
-    async def handle_remove(self, post_id):
-        if not self.timeline.remove_post_by_id(post_id):
-            return ErrorResponse("Post not found.")
-        self.timeline.store(self.storage)
-        return OkResponse()
 
     async def handle_unsub(self, userid):
         if userid == self.userid:
@@ -244,51 +244,31 @@ class Node:
         common = {}
 
         for subscription in self.subscriptions.to_serializable():
-            #print("SUB = " + str(subscription))
-            #print("\nIN FOR\n")
             current_subscriptions = await self.kademlia_connection.get_subscribed(subscription)
 
-            #print("\nSIZE OF SUBSCRIPTIONS: " + str(len(current_subscriptions)) + "\n")
-
             for sub in current_subscriptions:
-                #print("FRIEND OF SUB = " + str(sub))
-                #print("ME = " + str(self.userid))
-
                 if sub == self.userid:
-                    #print("\nself\n")
                     continue
 
                 sub = str(sub)
 
                 if sub in self.subscriptions.to_serializable():
-                    #print("ALREADY IN SUBS")
                     continue
 
                 suggestions.add(sub)
-
-                #print("\nCOMMON KEYS:")
-                #print(common.keys())
 
                 if sub in common.keys():
                     common[sub].add(subscription)
                 else:
                     common[sub] = {subscription}
 
-        response = []
         response = [{"userid": s, "common": list(common[s])} for s in suggestions]
 
         response.sort(key=lambda x: len(x["common"]), reverse=True)
 
-        #print("\n\nRESPONSE = ")
-        #print(response)
-        #print("\n\n")
+        response = {"users": response if max_users is None else response[:max_users]}
 
-        r = {"users": response if max_users is None else response[:max_users]}
-
-        #print("\n\nREAL RESPONSE = ")
-        #print(r)
-
-        return OkResponse(r)
+        return OkResponse(response)
 
     async def update_cached_timeline(self, userid):
         subscribers = await self.kademlia_connection.get_subscribers(userid)

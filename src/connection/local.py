@@ -65,7 +65,6 @@ class LocalConnection(BaseConnection):
         elif command == "view":
             if "max-posts" not in message:
                 message["max-posts"] = None
-
             return await self.handle_view(message["max-posts"])
         elif command == "people-i-may-know":
             if "max-people" not in message:
