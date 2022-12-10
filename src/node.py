@@ -32,7 +32,7 @@ class Node:
         self.local_connection = LocalConnection(
             self.handle_get,
             self.handle_post,
-            self.handle_delete,
+            self.handle_remove,
             self.handle_sub,
             self.handle_unsub,
             self.handle_view,
@@ -193,7 +193,7 @@ class Node:
             print("Could not subscribe.", e)
             return ErrorResponse("Could not subscribe.")
     
-    async def handle_delete(self, post_id):
+    async def handle_remove(self, post_id):
         if not self.timeline.remove_post_by_id(post_id):
             return ErrorResponse("Post not found.")
         self.timeline.store(self.storage)

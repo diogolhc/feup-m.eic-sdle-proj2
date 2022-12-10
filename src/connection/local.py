@@ -13,7 +13,7 @@ class LocalConnection(BaseConnection):
         self,
         handle_get,
         handle_post,
-        handle_delete,
+        handle_remove,
         handle_sub,
         handle_unsub,
         handle_view,
@@ -22,7 +22,7 @@ class LocalConnection(BaseConnection):
     ):
         self.handle_get = handle_get
         self.handle_post = handle_post
-        self.handle_delete = handle_delete
+        self.handle_remove = handle_remove
         self.handle_sub = handle_sub
         self.handle_unsub = handle_unsub
         self.handle_view = handle_view
@@ -44,10 +44,10 @@ class LocalConnection(BaseConnection):
             if "content" not in message:
                 return ErrorResponse("No content provided.")
             return await self.handle_post(message["content"])
-        elif command == "delete":
+        elif command == "remove":
             if "post-id" not in message:
                 return ErrorResponse("No post-id provided.")
-            return await self.handle_delete(message["post-id"])
+            return await self.handle_remove(message["post-id"])
         elif command == "sub":
             if "userid" not in message:
                 return ErrorResponse("No userid provided.")
