@@ -124,9 +124,9 @@ class Node:
                     if rnd.random() >= heuristic_probability:
                         break
                     heuristic_probability *= self.TRY_ANOTHER_SUBSCRIBER_PROBABILITY_DECAY
-                
-                timeline = response_timeline
-                last_update_check = response_timeline.last_updated
+                else:
+                    timeline = response_timeline
+                    last_update_check = response_timeline.last_updated
             else:
                 log.debug("Subscriber %s responded with error: %s", subscriber, response["error"])
         
