@@ -115,6 +115,7 @@ class Node:
         timeline = None
         last_update_check = last_updated_after
         heuristic_probability = 75.0
+        rnd.shuffle(subscribers)
 
         for subscriber in subscribers:
 
