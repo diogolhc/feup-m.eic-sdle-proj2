@@ -1,5 +1,6 @@
 """Operations made to the node via a local socket."""
 import logging
+from tabulate import tabulate
 
 from src.connection import request
 from src.data.merged_timeline import MergedTimeline
@@ -64,6 +65,8 @@ async def view(local_port, max_posts=None):
     response = await execute({"command": "view", "max-posts": max_posts}, local_port)
 
     if response["status"] == "ok":
+        for warning in response["warnings"]:
+            print(f"Warning: Could not get posts from user {warning['subscription']}: {warning['message']}")
         print(MergedTimeline.from_serializable(response["timeline"]).pretty_str())
 
 
@@ -73,4 +76,13 @@ async def people_i_may_know(local_port, max_users=None):
     )
 
     if response["status"] == "ok":
-        print(response["users"]) # TODO estou a ver mal ou isto não faz pretty print?
+        print()
+
+        def table_row(suggestion):
+            return [
+                suggestion["userid"],
+                ", ".join(suggestion["subscribed-by"]),
+            ]
+
+        tabledata = [table_row(post) for post in response["users"]]
+        print(tabulate(tabledata, headers=["userid", "subscribed by"]))

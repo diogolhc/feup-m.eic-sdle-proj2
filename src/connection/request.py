@@ -8,8 +8,6 @@ log = logging.getLogger('timeline')
 async def request(data, ip, port):
     reader, writer = await asyncio.open_connection(ip, port)
 
-    print("Connection successful")
-
     log.debug("Sending message: %s", data)
     writer.write(json.dumps(data).encode())
     writer.write_eof()

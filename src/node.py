@@ -47,19 +47,19 @@ class Node:
         try:
             self.timeline = Timeline.read(self.storage, self.userid)
         except Exception as e:
-            print("Could not read timeline from storage.", e)
+            log.error("Could not read timeline from storage.", e)
             exit(1)
 
         try:
             self.subscriptions = Subscriptions.read(self.storage)
         except Exception as e:
-            print("Could not read subscriptions from storage.", e)
+            log.error("Could not read subscriptions from storage.", e)
             exit(1)
 
         try:
             self.next_post_id = NextPostId.read(self.storage)
         except Exception as e:
-            print("Could not read next post id from storage.", e)
+            log.error("Could not read next post id from storage.", e)
             exit(1)
 
     async def get_local(self, userid, max_posts):
@@ -77,7 +77,7 @@ class Node:
                     Timeline.delete(self.storage, userid)
 
             except Exception as e:
-                print("Could not read timeline from storage.", e)
+                log.error("Could not read timeline from storage.", e)
 
         return None
 
@@ -98,9 +98,7 @@ class Node:
             if response["status"] == "ok":
                 return OkResponse({"timeline": response["timeline"]})
         except Exception as e:
-            message = ("Could not connect to %s", userid)
-            log.debug(message)
-            print(message)
+            log.error("Could not connect to %s: %s", userid, e)
 
         # get timeline from a subscriber
         if subscribers is None:
@@ -172,7 +170,7 @@ class Node:
             if post is not None:
                 self.timeline.remove_post(post)
                 self.next_post_id.rollback()
-            print("Could not post message.", e)
+            log.error("Could not post message.", e)
             return ErrorResponse("Could not post message.")
 
     async def handle_remove(self, post_id):
@@ -198,7 +196,7 @@ class Node:
             return OkResponse()
         except Exception as e:
             self.subscriptions.subscriptions = subscriptions_backup
-            print("Could not subscribe.", e)
+            log.error("Could not subscribe.", e)
             return ErrorResponse("Could not subscribe.")
 
     async def handle_unsub(self, userid):
@@ -217,7 +215,7 @@ class Node:
             return OkResponse()
         except Exception as e:
             self.subscriptions.subscriptions = subscriptions_backup
-            print("Could not unsubscribe.", e)
+            log.error("Could not unsubscribe.", e)
             return ErrorResponse("Could not unsubscribe.")
 
     async def handle_view(self, max_posts):
@@ -230,7 +228,7 @@ class Node:
             if response.status == "ok":
                 timelines.append(Timeline.from_serializable(response.data["timeline"]))
             else:
-                warnings.append(response.data["error"] + "-" + subscription)
+                warnings.append({"message": response.data["error"], "subscription": str(subscription)})
 
         return OkResponse(
             {
@@ -243,7 +241,7 @@ class Node:
 
     async def handle_people_i_may_know(self, max_users):
         suggestions = set()
-        common = {}
+        subscribed_by = {}
 
         for subscription in self.subscriptions.to_serializable():
             current_subscriptions = await self.kademlia_connection.get_subscribed(subscription)
@@ -259,14 +257,14 @@ class Node:
 
                 suggestions.add(sub)
 
-                if sub in common.keys():
-                    common[sub].add(subscription)
+                if sub in subscribed_by.keys():
+                    subscribed_by[sub].add(subscription)
                 else:
-                    common[sub] = {subscription}
+                    subscribed_by[sub] = {subscription}
 
-        response = [{"userid": s, "common": list(common[s])} for s in suggestions]
+        response = [{"userid": s, "subscribed-by": list(subscribed_by[s])} for s in suggestions]
 
-        response.sort(key=lambda x: len(x["common"]), reverse=True)
+        response.sort(key=lambda x: len(x["subscribed-by"]), reverse=True)
 
         response = {"users": response if max_users is None else response[:max_users]}
 
@@ -315,6 +313,7 @@ class Node:
 
         self.max_cached_posts = max_cached_posts
         self.time_to_live = time_to_live
+
         while True:
             for subscription in self.subscriptions.subscriptions:
                 asyncio.create_task(self.update_cached_timeline(subscription))

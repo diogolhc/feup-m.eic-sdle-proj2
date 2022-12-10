@@ -21,6 +21,7 @@ class BaseConnection:
 
         if "command" in message:
             response = await self.handle_command(message["command"], message)
+            log.info("Received command %s: %s", message["command"], response.status)
         else:
             response = ErrorResponse("No command provided.")
 

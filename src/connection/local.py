@@ -74,7 +74,7 @@ class LocalConnection(BaseConnection):
             return ErrorResponse("Unknown command.")
 
     async def start(self, port):
-        debug_message = lambda: log.debug(
+        debug_message = lambda: log.info(
             "Locally listening for instructions on port %s", port
         )
         await super().start("127.0.0.1", port, debug_message)

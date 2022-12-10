@@ -58,6 +58,8 @@ def main():
     args = parse_arguments()
     if args.debug:
         log.setLevel(logging.DEBUG)
+    else:
+        log.setLevel(logging.INFO)
 
     log.debug("Called with arguments: %s", args)
 
