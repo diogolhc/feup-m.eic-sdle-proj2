@@ -78,6 +78,7 @@ class Node:
     async def get_peers(
         self, userid, max_posts, subscribers=None, last_updated_after=None
     ):
+        # TODO if we are subscribed to userid, maybe we can update our cache with the result of this function?
         # 3rd try: get timeline directly from owner
         data = {
             "command": "get-timeline",
