@@ -17,12 +17,12 @@ def parse_arguments():
     subparsers = parser.add_subparsers(required=True, dest="command")
 
     start_parser = subparsers.add_parser("start", description="Start running the user's node.")
+    view_parser = subparsers.add_parser("view", description="View your feed with the posts made by you and the users you are subscribed to.")
+    get_parser = subparsers.add_parser("get", description="Find a user's timeline.")
     post_parser = subparsers.add_parser("post", description="Post in your timeline.")
     remove_parser = subparsers.add_parser("remove", description="Remove a post from your timeline.")
-    get_parser = subparsers.add_parser("get", description="Find a user's timeline.")
     sub_parser = subparsers.add_parser("sub", description="Subscribe to a user's timeline.")
     unsub_parser = subparsers.add_parser("unsub", description="Unsubscribe to a user's timeline.")
-    view_parser = subparsers.add_parser("view", description="View your feed with the posts made by you and the users you are subscribed to.")
     may_know_parser = subparsers.add_parser("people-i-may-know", description="Find people you may know based on your subscriptions.")
     all_parsers = [start_parser, post_parser, remove_parser, get_parser, sub_parser, unsub_parser, view_parser, may_know_parser]
 

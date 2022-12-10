@@ -1,9 +1,7 @@
 """Classes to represent a timeline of posts from a user and a cached timeline."""
 import os
 from datetime import datetime, timedelta
-
 from tabulate import tabulate
-
 from src.data.user import User
 
 
@@ -146,7 +144,7 @@ class TimelineCache(Timeline):
         self.valid_until = valid_until
 
     def is_valid(self):
-        return self.valid_until is None or datetime.now() < self.valid_until
+        return self.valid_until is None or datetime.now() <= self.valid_until
 
     def cache(self, max_posts):
         posts = [

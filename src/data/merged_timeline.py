@@ -47,7 +47,6 @@ class MergedTimeline:
 
     @staticmethod
     def from_serializable(data):
-
         for p in data["posts"]:
             p["userid"] = User.from_str(p["userid"])
 
@@ -64,7 +63,6 @@ class MergedTimeline:
     def pretty_str(self):
         posts = [
             {
-                "id": p["id"],
                 "userid": p["userid"],
                 "timestamp": datetime.fromisoformat(p["timestamp"]),
                 "content": p["content"],
@@ -76,11 +74,10 @@ class MergedTimeline:
 
         def table_row(post):
             return [
-                post["id"],
                 str(post["userid"]),
                 post["timestamp"].strftime("%Y-%m-%d %H:%M:%S"),
                 post["content"],
             ]
 
         tabledata = [table_row(post) for post in posts]
-        return tabulate(tabledata, headers=["id", "userid", "time", "content"])
+        return tabulate(tabledata, headers=["userid", "time", "content"])
