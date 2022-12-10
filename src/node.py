@@ -139,6 +139,7 @@ class Node:
                             continue   
                 else:
                     log.debug("First get peer fase")
+                # TODO maybe there is a better fix for this?
                 response["timeline"]['userid'] = str(response["timeline"]['userid'])
                 response['timeline']['valid_until'] = response['timeline']['valid_until'].isoformat()
                 response['timeline']['last_updated'] = response['timeline']['last_updated'].isoformat()
