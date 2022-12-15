@@ -1,8 +1,9 @@
 """A server that listens to other nodes."""
+import logging
+
 from src.connection.base import BaseConnection
 from src.connection.response import ErrorResponse
 from src.data.user import User
-import logging
 
 log = logging.getLogger("timeline")
 

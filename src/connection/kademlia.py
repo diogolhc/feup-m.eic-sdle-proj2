@@ -1,11 +1,12 @@
 """Handles and abstracts the connection to the kademlia DHT network."""
-from src.data.user import User
-from src.validator import IpPortValidator
 import asyncio
 import random
 import logging
 import json
 from kademlia.network import Server
+
+from src.data.user import User
+from src.validator import IpPortValidator
 
 log = logging.getLogger("timeline")
 
